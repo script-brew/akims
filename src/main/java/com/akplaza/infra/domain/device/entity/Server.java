@@ -19,8 +19,8 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.Lob;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
-import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.Builder;
@@ -39,8 +39,8 @@ public class Server extends BaseTimeEntity {
     private Long id;
 
     // A server is a specific piece of hardware.
-    @OneToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL)
-    @JoinColumn(name = "hardware_id")
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "hardware_id", nullable = true)
     private Hardware hardware;
 
     @Column(nullable = false, unique = true, length = 100)
@@ -100,6 +100,18 @@ public class Server extends BaseTimeEntity {
         this.ha = ha;
         this.backupInfo = backupInfo;
         this.monitoringInfo = monitoringInfo;
+    }
+
+    // --- 비즈니스 로직 (연관관계 편의 메서드 등) ---
+
+    // 하드웨어 이전/변경 기능 (물리 서버 이관 또는 VM vMotion(Host 이동) 시 활용)
+    public void changeHardware(Hardware newHardware) {
+        this.hardware = newHardware;
+    }
+
+    // 클라우드/가상화 여부를 확인하는 유틸리티 메서드
+    public boolean isVirtualEnvironment() {
+        return this.serverType == ServerType.VIRTUAL || this.hardware == null;
     }
 
     // Helper methods to manage relationships

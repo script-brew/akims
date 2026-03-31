@@ -1,0 +1,93 @@
+/* 🌟 Flexbox를 활용한 모던 레이아웃 */
+.app-wrapper {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+/* Header */
+.app-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  height: var(--header-height);
+  background-color: var(--primary-color);
+  color: white;
+  padding: 0 20px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  z-index: 10;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.logo-img {
+  height: 30px;
+  border-radius: 4px;
+}
+.logo-text {
+  font-size: 1.2rem;
+  font-weight: bold;
+}
+.logo-text small {
+  font-size: 0.8rem;
+  font-weight: normal;
+  color: #ccc;
+}
+
+/* 본문 레이아웃 (Sidebar + Main) */
+.app-body {
+  display: flex;
+  flex: 1;
+  overflow: hidden; /* Main 영역만 스크롤되도록 */
+}
+
+/* Sidebar */
+.app-sidebar {
+  width: var(--sidebar-width);
+  background-color: white;
+  border-right: 1px solid var(--border-color);
+  overflow-y: auto;
+}
+
+.nav-list {
+  list-style: none;
+  padding: 20px 0;
+}
+.nav-group {
+  padding: 10px 20px 5px;
+  font-size: 0.8rem;
+  color: #999;
+  text-transform: uppercase;
+  font-weight: bold;
+}
+.nav-link {
+  display: block;
+  padding: 12px 20px;
+  text-decoration: none;
+  color: var(--secondary-color);
+  transition: background-color 0.2s;
+}
+.nav-link:hover {
+  background-color: var(--bg-light);
+  border-left: 3px solid var(--accent-color);
+}
+
+/* Main Content */
+.app-main {
+  flex: 1;
+  padding: 20px;
+  overflow-y: auto;
+}
+
+/* Footer */
+.app-footer {
+  text-align: center;
+  padding: 10px;
+  font-size: 0.8rem;
+  color: #777;
+  background-color: white;
+  border-top: 1px solid var(--border-color);
+}

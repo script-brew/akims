@@ -1,0 +1,26 @@
+/* 전역 변수 (색상, 폰트, 여백 등) - 실무에서 가장 중요하게 관리하는 영역 */
+:root {
+  --primary-color: #2c3e50;
+  --secondary-color: #34495e;
+  --accent-color: #3498db;
+  --text-color: #333;
+  --bg-light: #f4f7f6;
+  --border-color: #e0e0e0;
+  --sidebar-width: 250px;
+  --header-height: 60px;
+}
+
+/* 브라우저 기본 마진/패딩 초기화 */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  color: var(--text-color);
+  background-color: var(--bg-light);
+}
+
+/* 기본 버튼 스타일 등 공통 요소 추가 가능 */

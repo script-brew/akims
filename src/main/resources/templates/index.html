@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AKIMS - 인프라 자산 관리 솔루션</title>
+
+    <link rel="stylesheet" th:href="@{/css/common.css}" />
+    <link rel="stylesheet" th:href="@{/css/layout.css}" />
+  </head>
+  <body>
+    <header th:replace="~{layout/header :: headerFragment}"></header>
+
+    <div class="app-body">
+      <aside th:replace="~{layout/sidebar :: sidebarFragment}"></aside>
+
+      <main class="app-main">
+        <div class="dashboard-welcome">
+          <h1>AKIMS 메인 대시보드에 오신 것을 환영합니다!</h1>
+          <p>좌측 메뉴를 통해 자산 관리를 시작하세요.</p>
+
+          <div
+            style="
+              margin-top: 30px;
+              padding: 20px;
+              background-color: white;
+              border: 1px solid var(--border-color);
+              border-radius: 8px;
+            "
+          >
+            <h3>시스템 현황 요약 (준비 중)</h3>
+            <p style="color: #777; margin-top: 10px">
+              차트 및 통계 데이터가 표시될 영역입니다.
+            </p>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <footer th:replace="~{layout/footer :: footerFragment}"></footer>
+  </body>
+</html>

@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+  <aside th:fragment="sidebarFragment" class="app-sidebar">
+    <nav class="sidebar-nav">
+      <ul class="nav-list">
+        <li class="nav-group">공간 자산</li>
+        <li>
+          <a th:href="@{/view/locations}" class="nav-link"
+            >장소(Location) 관리</a
+          >
+        </li>
+        <li><a th:href="@{/view/racks}" class="nav-link">랙(Rack) 관리</a></li>
+
+        <li class="nav-group">물리 자산</li>
+        <li>
+          <a th:href="@{/view/hardwares}" class="nav-link"
+            >하드웨어 장비 관리</a
+          >
+        </li>
+
+        <li class="nav-group">논리 자산</li>
+        <li>
+          <a th:href="@{/view/servers}" class="nav-link">서버(Server) 관리</a>
+        </li>
+        <li>
+          <a th:href="@{/view/network-devices}" class="nav-link"
+            >네트워크 장비 관리</a
+          >
+        </li>
+
+        <li class="nav-group">네트워크 풀</li>
+        <li>
+          <a th:href="@{/view/ips}" class="nav-link">IP 대역 및 자산 관리</a>
+        </li>
+      </ul>
+    </nav>
+  </aside>
+</html>

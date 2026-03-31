@@ -83,40 +83,52 @@ function renderVisualRacks() {
         const hw = hwInThisRack.find((h) => h.rackPosition + h.size - 1 === u);
 
         if (hw) {
-          // 하드웨어 타입별 CSS 클래스 결정
           let typeClass = "hw-default";
           if (hw.equipmentType === "SERVER") typeClass = "hw-server";
           if (hw.equipmentType === "SWITCH" || hw.equipmentType === "ROUTER")
             typeClass = "hw-switch";
           if (hw.equipmentType === "STORAGE") typeClass = "hw-storage";
 
-          // 단일 전원 경고 아이콘 (빨간 화살표)
           const powerAlert = hw.isSinglePower
-            ? `<span class="single-power-alert">◀ 단일전원 주의</span>`
+            ? `<span class="single-power-alert" title="단일 전원 장비입니다">◀</span>`
             : "";
 
-          // 높이 계산 (1U = 28px, 테두리 1px 고려)
-          const heightCss = `height: calc((28px * ${hw.size}) + ${
-            hw.size - 1
-          }px);`;
+          const hwName = hw.description || hw.equipmentType;
+
+          // 🌟 1U의 높이를 29px(border 1px 포함)로 계산하여 랙 슬롯 전체 높이 지정
+          const heightCss = `height: ${29 * hw.size}px;`;
+
+          // 🌟 15년 차의 핵심: 장비 크기만큼 연속된 U 번호 그룹(Rail) 생성
+          let uNumsHTML = `<div class="u-num-group">`;
+          for (let i = 0; i < hw.size; i++) {
+            // 예: 12U 위치에 4U 장비면 -> 12U, 11U, 10U, 9U 순서로 생성
+            uNumsHTML += `<div class="u-num">${u - i}U</div>`;
+          }
+          uNumsHTML += `</div>`;
 
           slotsHTML += `
-                    <div class="rack-slot" style="${heightCss}">
-                        <span class="u-num">${u}U</span>
-                        <div class="hw-item ${typeClass}">
-                            <span>${hw.model} (${hw.serialNo})</span>
-                            ${powerAlert}
-                        </div>
-                    </div>
-                `;
-          skipUs = hw.size - 1; // 다음 U 루프부터 이 장비의 남은 크기만큼 건너뜀
+              <div class="rack-slot" style="${heightCss}">
+                  ${uNumsHTML} <div class="hw-item-wrapper"> <div class="hw-item ${typeClass}">
+                          <div class="hw-info hw-name" title="${hwName}">${hwName}</div>
+                          <div class="hw-info hw-model" title="${hw.model}">${hw.model}</div>
+                          <div class="hw-info hw-serial" title="${hw.serialNo}">
+                              ${powerAlert} ${hw.serialNo}
+                          </div>
+                      </div>
+                  </div>
+              </div>
+          `;
+          skipUs = hw.size - 1;
         } else {
-          // 비어있는 슬롯
+          // 비어있는 슬롯 (1U)
           slotsHTML += `
-                    <div class="rack-slot empty">
-                        <span class="u-num">${u}U</span>
-                    </div>
-                `;
+              <div class="rack-slot empty" style="height: 29px;">
+                  <div class="u-num-group">
+                      <div class="u-num">${u}U</div>
+                  </div>
+                  <div class="hw-item-wrapper empty-wrapper"></div>
+              </div>
+          `;
         }
       }
 

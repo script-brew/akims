@@ -34,6 +34,32 @@ public class HardwareService {
     private final NetworkDeviceRepository networkDeviceRepository;
 
     // ==========================================
+    // 🌟 물리적 실장(Rack Mounting) 유효성 검증 로직
+    // ==========================================
+    private void validateRackSpace(Rack rack, Integer rackPosition, Integer size, Long currentHardwareId) {
+        if (rack == null || rackPosition == null)
+            return; // 미실장(창고 보관)인 경우 패스
+
+        // 1. 랙 범위(Size) 초과 검사
+        // 예: 42U 랙에 40U 위치부터 4U 짜리를 넣으면 끝 위치가 43U가 되어 에러 발생
+        int endU = rackPosition + size - 1;
+        if (rackPosition < 1 || endU > rack.getSize()) {
+            throw new IllegalArgumentException(
+                    String.format("장비 크기 초과: 해당 랙(%s)은 %dU까지 실장 가능하며, 입력하신 장비는 %dU ~ %dU 공간을 요구합니다.",
+                            rack.getRackNo(), rack.getSize(), rackPosition, endU));
+        }
+
+        // 2. 다른 장비와의 겹침(충돌) 검사
+        boolean isOverlapping = hardwareRepository.existsOverlappingHardware(
+                rack.getId(), rackPosition, endU, currentHardwareId);
+        if (isOverlapping) {
+            throw new ResourceInUseException(
+                    String.format("실장 위치 충돌: %s 랙의 %dU ~ %dU 위치에는 이미 다른 장비가 실장되어 있습니다.",
+                            rack.getRackNo(), rackPosition, endU));
+        }
+    }
+
+    // ==========================================
     // 1. 하드웨어 등록 (CREATE)
     // ==========================================
     @Transactional
@@ -46,8 +72,14 @@ public class HardwareService {
             throw new DuplicateResourceException("이미 등록된 시리얼 넘버입니다: " + dto.getSerialNo());
         }
 
-        // [Exception Point 2] Rack 매핑 검증
-        Rack rack = getRackIfPresent(dto.getRackId());
+        Rack rack = null;
+        if (dto.getRackId() != null) {
+            rack = rackRepository.findById(dto.getRackId())
+                    .orElseThrow(() -> new ResourceNotFoundException("지정된 랙을 찾을 수 없습니다."));
+
+            // 🌟 등록 전 공간 검증 수행 (새로 생성하므로 currentHardwareId는 null)
+            validateRackSpace(rack, dto.getRackPosition(), dto.getSize(), null);
+        }
 
         Hardware hardware = Hardware.builder()
                 .rack(rack)
@@ -102,7 +134,14 @@ public class HardwareService {
             throw new DuplicateResourceException("이미 존재하는 시리얼 넘버입니다: " + dto.getSerialNo());
         }
 
-        Rack newRack = getRackIfPresent(dto.getRackId());
+        Rack newRack = null;
+        if (dto.getRackId() != null) {
+            newRack = rackRepository.findById(dto.getRackId())
+                    .orElseThrow(() -> new ResourceNotFoundException("지정된 랙을 찾을 수 없습니다."));
+
+            // 🌟 수정 전 공간 검증 수행 (자기 자신의 ID는 충돌 검사에서 제외)
+            validateRackSpace(newRack, dto.getRackPosition(), dto.getSize(), id);
+        }
 
         // 💡 엔티티 상태 변경 (더티 체킹) - 빌더 패턴 외에 엔티티 내부 Update 메서드 활용 권장
         // 하드웨어 교체나 데이터센터 이전 시 Rack 정보가 변경될 수 있음

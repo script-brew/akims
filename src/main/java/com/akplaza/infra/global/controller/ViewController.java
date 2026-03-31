@@ -39,4 +39,10 @@ public class ViewController {
     public String hardwares() {
         return "hardware/hardware";
     }
+
+    // 🌟 추가: 서버 관리 화면 라우팅
+    @GetMapping("/view/servers")
+    public String servers() {
+        return "device/server";
+    }
 }

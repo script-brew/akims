@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+  <head>
+    <meta charset="UTF-8" />
+    <title>AKIMS - 서버 관리</title>
+    <link rel="stylesheet" th:href="@{/css/common.css}" />
+    <link rel="stylesheet" th:href="@{/css/layout.css}" />
+    <link rel="stylesheet" th:href="@{/css/domain/device/server.css}" />
+  </head>
+  <body>
+    <header th:replace="~{layout/header :: headerFragment}"></header>
+
+    <div class="app-body">
+      <aside th:replace="~{layout/sidebar :: sidebarFragment}"></aside>
+
+      <main class="app-main">
+        <div class="content-header">
+          <h2>논리 서버(Server) 관리</h2>
+          <div class="header-actions">
+            <button id="btn-open-modal" class="btn">새 서버 등록</button>
+            <button id="btn-edit" class="btn" style="background-color: #f39c12">
+              선택 수정
+            </button>
+            <button id="btn-delete" class="btn danger">선택 삭제</button>
+          </div>
+        </div>
+
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th width="4%">
+                <input type="checkbox" id="check-all" class="srv-checkbox" />
+              </th>
+              <th width="15%">호스트명(HostName)</th>
+              <th width="12%">운영체제(OS)</th>
+              <th width="12%">서버 타입</th>
+              <th width="12%">스펙(vCPU/RAM)</th>
+              <th width="15%">IP 주소</th>
+              <th width="20%">물리 호스트 (Hardware)</th>
+              <th width="10%">용도</th>
+            </tr>
+          </thead>
+          <tbody id="server-table-body">
+            <tr>
+              <td colspan="8" style="text-align: center">
+                데이터를 불러오는 중입니다...
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </main>
+    </div>
+
+    <footer th:replace="~{layout/footer :: footerFragment}"></footer>
+
+    <div id="srv-modal" class="modal-overlay">
+      <div class="modal-content">
+        <h3 id="modal-title">서버 인스턴스 등록</h3>
+        <input type="hidden" id="srv-id" />
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="srv-hostname">호스트명 (HostName) *</label>
+            <input
+              type="text"
+              id="srv-hostname"
+              placeholder="예: ak-prd-web01"
+            />
+          </div>
+          <div class="form-group">
+            <label for="srv-category">서버 용도 *</label>
+            <select id="srv-category">
+              <option value="WEB">WEB 서버</option>
+              <option value="WAS">WAS 서버</option>
+              <option value="DB">DB 서버</option>
+              <option value="UTIL">유틸/관리 서버</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="srv-type">서버 타입 *</label>
+            <select id="srv-type">
+              <option value="VIRTUAL">가상 머신 (VM)</option>
+              <option value="PHYSICAL">물리 서버 (Baremetal)</option>
+              <option value="CLOUD">클라우드 (AWS, GCP 등)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="srv-os">운영체제 (OS) *</label>
+            <input
+              type="text"
+              id="srv-os"
+              placeholder="예: CentOS 7.9, Win2019"
+            />
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="srv-cpu">CPU (Core) *</label>
+            <input type="number" id="srv-cpu" value="4" min="1" />
+          </div>
+          <div class="form-group">
+            <label for="srv-ram">Memory (GB) *</label>
+            <input type="number" id="srv-ram" value="8" min="1" />
+          </div>
+        </div>
+
+        <hr
+          style="
+            border: 0;
+            border-top: 1px solid var(--border-color);
+            margin-bottom: 15px;
+          "
+        />
+
+        <div id="hardware-mapping-area" class="form-group full">
+          <label for="srv-hardware">구동 물리 호스트 (Hardware)</label>
+          <select id="srv-hardware">
+            <option value="">-- 매핑 안 함 (또는 알 수 없음) --</option>
+          </select>
+          <small style="color: #7f8c8d"
+            >※ 물리서버나 VM이 구동 중인 실제 하드웨어 장비를 선택하세요.</small
+          >
+        </div>
+
+        <div class="form-group full">
+          <label for="srv-desc">설명 / 비고</label>
+          <input
+            type="text"
+            id="srv-desc"
+            placeholder="서버에 대한 추가 설명"
+          />
+        </div>
+
+        <div class="modal-actions">
+          <button id="btn-cancel" class="btn" style="background-color: #95a5a6">
+            취소
+          </button>
+          <button id="btn-save" class="btn">저장</button>
+        </div>
+      </div>
+    </div>
+
+    <script type="module" th:src="@{/js/device/server.js}"></script>
+  </body>
+</html>

@@ -5,4 +5,9 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import com.akplaza.infra.domain.hardware.entity.Hardware;
 
 public interface HardwareRepository extends JpaRepository<Hardware, Long> {
+
+    boolean existsBySerialNo(String serialNo);
+
+    boolean existsByRackId(Long rackId);
+
 }

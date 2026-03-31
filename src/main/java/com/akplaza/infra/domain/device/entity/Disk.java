@@ -1,8 +1,23 @@
 package com.akplaza.infra.domain.device.entity;
 
 import com.akplaza.infra.global.common.entity.BaseTimeEntity;
-import jakarta.persistence.*;
-import lombok.*;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
+import lombok.AccessLevel;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 @Entity
 @Table(name = "disk")
@@ -23,16 +38,22 @@ public class Disk extends BaseTimeEntity {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
-    private DiskType type;  // 디스크 타입
+    private DiskType type; // 디스크 타입
 
     @Column(nullable = false)
-    private Integer size;     // 단위: GB
+    private Integer size; // 단위: GB
 
     @Column(nullable = false, length = 50)
-    private String mountPoint;  // 예: "C:\", "/", "/data"
+    private String mountPoint; // 예: "C:\", "/", "/data"
 
     @Builder
     public Disk(DiskType type, Integer size, String mountPoint) {
+        this.type = type;
+        this.size = size;
+        this.mountPoint = mountPoint;
+    }
+
+    public void updateDiskInfo(DiskType type, Integer size, String mountPoint) {
         this.type = type;
         this.size = size;
         this.mountPoint = mountPoint;

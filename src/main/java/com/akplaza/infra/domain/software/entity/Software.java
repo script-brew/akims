@@ -55,4 +55,11 @@ public class Software extends BaseTimeEntity {
         this.purpose = purpose;
         this.maintenanceInfo = maintenanceInfo;
     }
+
+    public void updateSoftwareInfo(String name, String version, String purpose, String maintenanceInfo) {
+        this.name = name;
+        this.version = version;
+        this.purpose = purpose;
+        this.maintenanceInfo = maintenanceInfo;
+    }
 }

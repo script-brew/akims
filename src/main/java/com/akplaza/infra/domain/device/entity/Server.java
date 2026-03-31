@@ -144,4 +144,20 @@ public class Server extends BaseTimeEntity {
                 .mapToInt(Disk::getSize)
                 .sum();
     }
+
+    public void updateServerInfo(String name, ServerCategory category, Environment environment,
+            String os, String description, ServerSpec spec,
+            boolean ha, String backupInfo, String monitoringInfo,
+            Hardware hardware) {
+        this.name = name;
+        this.category = category;
+        this.environment = environment;
+        this.os = os;
+        this.description = description;
+        this.spec = spec;
+        this.ha = ha;
+        this.backupInfo = backupInfo;
+        this.monitoringInfo = monitoringInfo;
+        this.hardware = hardware;
+    }
 }

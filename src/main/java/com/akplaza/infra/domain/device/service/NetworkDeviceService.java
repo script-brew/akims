@@ -118,11 +118,14 @@ public class NetworkDeviceService {
 
         Hardware newHardware = getHardwareIfPresent(dto.getHardwareId());
 
-        // 💡 실무 권장: 엔티티 내부에 update(...) 메서드를 만들어서 사용하지만, 현재 빌더만 있다면
-        // 하드웨어 변경을 처리하기 위해 엔티티에 메서드를 추가하는 것이 좋습니다.
-        // 현재는 하드웨어와 같은 핵심 연관관계만 더티 체킹의 예시로 둡니다.
-        // device.update(dto.getName(), dto.getCategory(), dto.getOs(), ... ,
-        // newHardware);
+        device.updateDeviceInfo(
+                dto.getName(),
+                dto.getCategory(),
+                dto.getOs(),
+                dto.getDescription(),
+                dto.isHa(),
+                dto.getMonitoringInfo(),
+                newHardware);
 
         log.info("네트워크 장비 수정 트랜잭션 완료 - ID: {}", id);
     }

@@ -67,4 +67,17 @@ public class NetworkDevice extends BaseTimeEntity {
         this.ha = ha;
         this.monitoringInfo = monitoringInfo;
     }
+
+    public void updateDeviceInfo(String name, NetworkDeviceCategory category,
+            String os, String description,
+            boolean ha, String monitoringInfo,
+            Hardware hardware) {
+        this.name = name;
+        this.category = category;
+        this.os = os;
+        this.description = description;
+        this.ha = ha;
+        this.monitoringInfo = monitoringInfo;
+        this.hardware = hardware;
+    }
 }

@@ -131,10 +131,17 @@ public class ServerService {
         // [예외 포인트 4] 하드웨어 변경 처리
         Hardware newHardware = validateAndGetHardware(dto.getHardwareId(), server.getServerType());
 
-        // 더티 체킹(Dirty Checking)을 통한 업데이트 (Repository.save 호출 불필요)
-        server.changeHardware(newHardware);
-        server.scaleUpSpec(new ServerSpec(dto.getCpuCore(), dto.getMemoryGb()));
-        // Note: 실제 실무에서는 엔티티 내부에 update(...) 메서드를 만들어 응집도를 높이는 것을 권장합니다.
+        server.updateServerInfo(
+                dto.getHostName(),
+                dto.getCategory(),
+                dto.getEnvironment(),
+                dto.getOs(),
+                dto.getDescription(),
+                new ServerSpec(dto.getCpuCore(), dto.getMemoryGb()),
+                dto.isHa(),
+                dto.getBackupInfo(),
+                dto.getMonitoringInfo(),
+                newHardware);
 
         log.info("서버 수정 트랜잭션 완료 - ID: {}", id);
     }

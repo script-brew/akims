@@ -30,6 +30,7 @@ public class HardwareUpdateRequest {
     @Min(value = 1, message = "크기는 1U 이상이어야 합니다.")
     private Integer size;
 
+    private Boolean isSinglePower;
     private String description;
     private Long rackId;
     private Integer rackPosition;

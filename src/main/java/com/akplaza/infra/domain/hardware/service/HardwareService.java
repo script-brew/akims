@@ -57,6 +57,7 @@ public class HardwareService {
                 .introductionYear(dto.getIntroductionYear())
                 .model(dto.getModel())
                 .serialNo(dto.getSerialNo())
+                .isSinglePower(dto.getIsSinglePower())
                 .description(dto.getDescription())
                 .build();
 
@@ -107,7 +108,7 @@ public class HardwareService {
         // 하드웨어 교체나 데이터센터 이전 시 Rack 정보가 변경될 수 있음
         hardware.updateHardwareInfo(dto.getModel(), dto.getSerialNo(), dto.getEquipmentType(),
                 dto.getIntroductionYear(), dto.getSize(), dto.getDescription(),
-                newRack, dto.getRackPosition());
+                newRack, dto.getRackPosition(), dto.getIsSinglePower());
 
         log.info("하드웨어 수정 트랜잭션 완료 - ID: {}", id);
     }

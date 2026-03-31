@@ -30,6 +30,8 @@ public class HardwareCreateRequest {
     @Min(value = 1, message = "크기는 1U 이상이어야 합니다.")
     private Integer size; // 차지하는 Rack 단위(U) (예: 1U, 2U)
 
+    private Boolean isSinglePower;
+
     private String description;
 
     // 위치 매핑 정보

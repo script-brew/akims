@@ -59,6 +59,7 @@ public class ServerService {
                 .category(dto.getCategory())
                 .environment(dto.getEnvironment())
                 .serverType(dto.getServerType())
+                .platform(dto.getPlatform())
                 .os(dto.getOs())
                 .description(dto.getDescription())
                 .spec(new ServerSpec(dto.getCpuCore(), dto.getMemoryGb()))

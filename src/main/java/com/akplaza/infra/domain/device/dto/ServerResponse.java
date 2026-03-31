@@ -13,6 +13,7 @@ public class ServerResponse {
     private String category;
     private String environment;
     private String serverType;
+    private String platform;
     private String os;
     private Integer cpuCore;
     private Integer memoryGb;
@@ -34,6 +35,7 @@ public class ServerResponse {
         this.category = server.getCategory().name();
         this.environment = server.getEnvironment().name();
         this.serverType = server.getServerType().name();
+        this.platform = server.getPlatform();
         this.os = server.getOs();
         this.cpuCore = server.getSpec() != null ? server.getSpec().getCpuCore() : 0;
         this.memoryGb = server.getSpec() != null ? server.getSpec().getMemoryGb() : 0;

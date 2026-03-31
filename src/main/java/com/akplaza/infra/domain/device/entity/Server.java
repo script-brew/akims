@@ -59,6 +59,9 @@ public class Server extends BaseTimeEntity {
     private ServerType serverType;
 
     @Column(length = 50)
+    private String platform;
+
+    @Column(length = 50)
     private String os; // 예: RHEL 8.4, Windows Server 2022
 
     @Lob
@@ -87,13 +90,14 @@ public class Server extends BaseTimeEntity {
 
     @Builder
     public Server(Hardware hardware, String name, ServerCategory category, Environment environment,
-            ServerType serverType, String os, String description, ServerSpec spec,
+            ServerType serverType, String platform, String os, String description, ServerSpec spec,
             boolean ha, String backupInfo, String monitoringInfo) {
         this.hardware = hardware;
         this.name = name;
         this.category = category;
         this.environment = environment;
         this.serverType = serverType;
+        this.platform = platform;
         this.os = os;
         this.description = description;
         this.spec = spec;

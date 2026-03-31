@@ -9,7 +9,7 @@ import lombok.Getter;
 @Getter
 public class ServerResponse {
     private Long id;
-    private String hostName;
+    private String name;
     private String category;
     private String environment;
     private String serverType;
@@ -31,7 +31,7 @@ public class ServerResponse {
     // 엔티티를 DTO로 변환하는 생성자
     public ServerResponse(Server server, List<String> ipAddresses) {
         this.id = server.getId();
-        this.hostName = server.getName();
+        this.name = server.getName();
         this.category = server.getCategory().name();
         this.environment = server.getEnvironment().name();
         this.serverType = server.getServerType().name();

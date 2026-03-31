@@ -41,12 +41,12 @@ public class ServerService {
     // ==========================================
     @Transactional // 쓰기 작업이므로 트랜잭션 활성화 (예외 발생 시 자동 Rollback)
     public Long createServer(ServerCreateRequest dto) {
-        log.info("서버 등록 트랜잭션 시작 - HostName: {}", dto.getHostName());
+        log.info("서버 등록 트랜잭션 시작 - HostName: {}", dto.getName());
 
         // [예외 포인트 1] HostName 중복 검증
-        if (serverRepository.existsByHostName(dto.getHostName())) {
-            log.error("서버 등록 실패 - 중복된 HostName: {}", dto.getHostName());
-            throw new DuplicateResourceException("이미 존재하는 서버명입니다: " + dto.getHostName());
+        if (serverRepository.existsByName(dto.getName())) {
+            log.error("서버 등록 실패 - 중복된 HostName: {}", dto.getName());
+            throw new DuplicateResourceException("이미 존재하는 서버명입니다: " + dto.getName());
         }
 
         // [예외 포인트 2] 하드웨어 종속성 검증
@@ -55,7 +55,7 @@ public class ServerService {
         // 엔티티 생성
         Server server = Server.builder()
                 .hardware(hardware)
-                .name(dto.getHostName())
+                .name(dto.getName())
                 .category(dto.getCategory())
                 .environment(dto.getEnvironment())
                 .serverType(dto.getServerType())
@@ -124,16 +124,16 @@ public class ServerService {
                 });
 
         // [예외 포인트 3] 이름이 변경된 경우 중복 체크
-        if (!server.getName().equals(dto.getHostName()) && serverRepository.existsByHostName(dto.getHostName())) {
-            log.error("서버 수정 실패 - 변경하려는 HostName이 이미 존재함: {}", dto.getHostName());
-            throw new DuplicateResourceException("이미 존재하는 서버명입니다: " + dto.getHostName());
+        if (!server.getName().equals(dto.getName()) && serverRepository.existsByName(dto.getName())) {
+            log.error("서버 수정 실패 - 변경하려는 HostName이 이미 존재함: {}", dto.getName());
+            throw new DuplicateResourceException("이미 존재하는 서버명입니다: " + dto.getName());
         }
 
         // [예외 포인트 4] 하드웨어 변경 처리
         Hardware newHardware = validateAndGetHardware(dto.getHardwareId(), server.getServerType());
 
         server.updateServerInfo(
-                dto.getHostName(),
+                dto.getName(),
                 dto.getCategory(),
                 dto.getEnvironment(),
                 dto.getOs(),

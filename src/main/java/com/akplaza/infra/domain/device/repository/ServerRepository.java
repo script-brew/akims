@@ -9,7 +9,7 @@ import com.akplaza.infra.domain.device.entity.Server;
 
 public interface ServerRepository extends JpaRepository<Server, Long> {
     // 향후 호스트명 중복 검사 등의 메서드를 여기에 추가할 수 있습니다.
-    boolean existsByHostName(String hostName);
+    boolean existsByName(String name);
 
     // 🌟 추가: 물리 하드웨어 삭제 전, 해당 하드웨어에 매핑된 서버가 존재하는지 확인
     boolean existsByHardwareId(Long hardwareId);

@@ -18,7 +18,7 @@ import lombok.NoArgsConstructor;
 public class ServerCreateRequest {
 
     @NotBlank(message = "서버명(HostName)은 필수입니다.")
-    private String hostName;
+    private String name;
 
     @NotNull(message = "서버 카테고리를 선택해주세요.")
     private ServerCategory category;

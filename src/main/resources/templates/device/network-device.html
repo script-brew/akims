@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+  <head>
+    <meta charset="UTF-8" />
+    <title>AKIMS - 네트워크 장비 관리</title>
+    <link rel="stylesheet" th:href="@{/css/common.css}" />
+    <link rel="stylesheet" th:href="@{/css/layout.css}" />
+    <link rel="stylesheet" th:href="@{/css/components.css}" />
+    <link rel="stylesheet" th:href="@{/css/domain/device/network-device.css}" />
+  </head>
+  <body>
+    <header th:replace="~{layout/header :: headerFragment}"></header>
+
+    <div class="app-body">
+      <aside th:replace="~{layout/sidebar :: sidebarFragment}"></aside>
+
+      <main class="app-main">
+        <div class="content-header">
+          <h2>논리 네트워크 장비 관리</h2>
+          <div class="header-actions">
+            <button id="btn-open-modal" class="btn">
+              새 네트워크 장비 등록
+            </button>
+            <button id="btn-edit" class="btn" style="background-color: #f39c12">
+              선택 수정
+            </button>
+            <button id="btn-delete" class="btn danger">선택 삭제</button>
+          </div>
+        </div>
+
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th width="4%">
+                <input type="checkbox" id="check-all" class="data-checkbox" />
+              </th>
+              <th width="20%">장비명 (Device Name)</th>
+              <th width="15%">장비 구분</th>
+              <th width="15%">할당 IP (관리용)</th>
+              <th width="25%">물리 호스트 (Hardware) 매핑</th>
+              <th width="21%">설명 / 비고</th>
+            </tr>
+          </thead>
+          <tbody id="nd-table-body">
+            <tr>
+              <td colspan="6" style="text-align: center">
+                데이터를 불러오는 중입니다...
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </main>
+    </div>
+
+    <footer th:replace="~{layout/footer :: footerFragment}"></footer>
+
+    <div id="nd-modal" class="modal-overlay">
+      <div class="modal-content" style="width: 550px">
+        <h3 id="modal-title">네트워크 장비 등록</h3>
+        <input type="hidden" id="nd-id" />
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="nd-category">장비 구분 *</label>
+            <select id="nd-category">
+              <option value="L2_SWITCH">L2 스위치</option>
+              <option value="L3_SWITCH">L3 스위치</option>
+              <option value="ROUTER">라우터</option>
+              <option value="FIREWALL">방화벽 (Firewall)</option>
+              <option value="L4_SWITCH">L4 스위치 (LB)</option>
+              <option value="L7_SWITCH">L7 스위치</option>
+              <option value="VPN">VPN 장비</option>
+              <option value="ETC">기타</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="nd-name">장비명 (Device Name) *</label>
+            <input type="text" id="nd-name" placeholder="예: ak-prd-fw01" />
+          </div>
+          <div class="form-group">
+            <label for="nd-os">운영체제(OS) *</label>
+            <input
+              type="text"
+              id="nd-os"
+              placeholder="예: Cisco IOS 15.7.9, JunOS"
+            />
+          </div>
+        </div>
+
+        <hr
+          style="
+            border: 0;
+            border-top: 1px solid var(--border-color);
+            margin-bottom: 15px;
+          "
+        />
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="nd-ip-cidr">관리 IP 대역 연동</label>
+            <select id="nd-ip-cidr">
+              <option value="">-- 대역 선택 (연동 안함) --</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="nd-ip-address">관리 IP 주소</label>
+            <input
+              type="text"
+              id="nd-ip-address"
+              placeholder="예: 10.10.10.1"
+            />
+          </div>
+        </div>
+
+        <div class="form-group full">
+          <label for="nd-hardware">물리 장비 (Hardware) 매핑</label>
+          <select id="nd-hardware">
+            <option value="">-- 매핑 안 함 (또는 알 수 없음) --</option>
+          </select>
+          <small style="color: #7f8c8d"
+            >※ 이 논리 장비가 구동되는 실제 물리 스위치/방화벽 하드웨어를
+            선택하세요.</small
+          >
+        </div>
+
+        <div class="form-group full">
+          <label for="nd-desc">설명 / 용도</label>
+          <input
+            type="text"
+            id="nd-desc"
+            placeholder="예: 외부망 연동 방화벽 (Active)"
+          />
+        </div>
+
+        <div class="modal-actions">
+          <button id="btn-cancel" class="btn cancel">취소</button>
+          <button id="btn-save" class="btn">저장</button>
+        </div>
+      </div>
+    </div>
+
+    <script type="module" th:src="@{/js/device/network-device.js}"></script>
+  </body>
+</html>

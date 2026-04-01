@@ -71,13 +71,9 @@ public class ServerService {
         Server savedServer = serverRepository.save(server);
         log.debug("서버 기본 정보 저장 완료 - ID: {}", savedServer.getId());
 
-        // [비즈니스 로직 연계] IP 할당 처리
-        if (dto.getIpAddresses() != null && !dto.getIpAddresses().isEmpty()) {
-            log.debug("서버 IP 할당 로직 실행 - 요청 IP 수: {}", dto.getIpAddresses().size());
-            for (String ipAddress : dto.getIpAddresses()) {
-                // IpService에 위임. 만약 누군가 쓰고있는 IP라면 여기서 예외가 터지고 트랜잭션 전체가 롤백됨.
-                ipService.allocateIp(ipAddress, AssignedType.SERVER, savedServer.getId());
-            }
+        // 🌟 수정된 부분: 프론트엔드의 데이터 구조에 맞게 단일 IP 할당 (CIDR 검증 포함)
+        if (dto.getIpAddress() != null && !dto.getIpAddress().isBlank()) {
+            ipService.allocateIp(dto.getIpCidrId(), dto.getIpAddress(), AssignedType.SERVER, savedServer.getId());
         }
 
         log.info("서버 등록 트랜잭션 성공적으로 완료 - 최종 ID: {}", savedServer.getId());
@@ -131,6 +127,13 @@ public class ServerService {
 
         // [예외 포인트 4] 하드웨어 변경 처리
         Hardware newHardware = validateAndGetHardware(dto.getHardwareId(), server.getServerType());
+
+        // 🌟 추가된 부분: IP 정보가 변경되었을 수 있으므로, 기존 IP 해제 후 새 IP 재할당
+        ipService.releaseIpForTarget(AssignedType.SERVER, server.getId());
+
+        if (dto.getIpAddress() != null && !dto.getIpAddress().isBlank()) {
+            ipService.allocateIp(dto.getIpCidrId(), dto.getIpAddress(), AssignedType.SERVER, server.getId());
+        }
 
         server.updateServerInfo(
                 dto.getHostName(),

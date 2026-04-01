@@ -45,7 +45,7 @@ public class Hardware extends BaseTimeEntity {
 
     // --- 하드웨어 기본 제원 ---
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 30)
+    @Column(nullable = false, columnDefinition = "VARCHAR(50)")
     private EquipmentType equipmentType; // 장비 종류 (SERVER, NETWORK 등)
 
     private Integer introductionYear; // 도입년도 (예: 2026)

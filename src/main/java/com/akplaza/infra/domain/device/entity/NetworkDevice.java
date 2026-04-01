@@ -42,7 +42,7 @@ public class NetworkDevice extends BaseTimeEntity {
     private String name; // 장비명 (HostName)
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20)
+    @Column(nullable = false, length = 20, columnDefinition = "VARCHAR(50)")
     private NetworkDeviceCategory category;
 
     @Column(length = 50)

@@ -63,13 +63,10 @@ public class NetworkDeviceService {
         NetworkDevice savedDevice = networkDeviceRepository.save(device);
         log.debug("네트워크 장비 기본 정보 저장 완료 - ID: {}", savedDevice.getId());
 
-        // [비즈니스 로직 연계] IP 할당 처리
-        if (dto.getIpAddresses() != null && !dto.getIpAddresses().isEmpty()) {
-            log.debug("네트워크 장비 IP 할당 로직 실행 - 대상 IP 수: {}", dto.getIpAddresses().size());
-            for (String ipAddress : dto.getIpAddresses()) {
-                // IpService가 트랜잭션에 참여. 실패 시 장비 등록까지 롤백됨.
-                ipService.allocateIp(ipAddress, AssignedType.NETWORK_DEVICE, savedDevice.getId());
-            }
+        // 🌟 추가된 부분: IP 정보가 변경되었을 수 있으므로, 기존 IP 해제 후 새 IP 재할당
+        if (dto.getIpAddress() != null && !dto.getIpAddress().isBlank()) {
+            ipService.allocateIp(dto.getIpCidrId(), dto.getIpAddress(), AssignedType.NETWORK_DEVICE,
+                    savedDevice.getId());
         }
 
         log.info("네트워크 장비 등록 트랜잭션 완료 - ID: {}", savedDevice.getId());
@@ -117,6 +114,13 @@ public class NetworkDeviceService {
         }
 
         Hardware newHardware = getHardwareIfPresent(dto.getHardwareId());
+
+        // 🌟 추가된 부분: IP 정보가 변경되었을 수 있으므로, 기존 IP 해제 후 새 IP 재할당
+        ipService.releaseIpForTarget(AssignedType.NETWORK_DEVICE, device.getId());
+
+        if (dto.getIpAddress() != null && !dto.getIpAddress().isBlank()) {
+            ipService.allocateIp(dto.getIpCidrId(), dto.getIpAddress(), AssignedType.NETWORK_DEVICE, device.getId());
+        }
 
         device.updateDeviceInfo(
                 dto.getName(),

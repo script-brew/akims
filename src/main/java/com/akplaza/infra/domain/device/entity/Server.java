@@ -47,15 +47,15 @@ public class Server extends BaseTimeEntity {
     private String hostName; // 서버명 (hostname)
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20)
+    @Column(nullable = false, length = 20, columnDefinition = "VARCHAR(50)")
     private ServerCategory serverCategory;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20)
+    @Column(nullable = false, length = 20, columnDefinition = "VARCHAR(50)")
     private Environment environment;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20)
+    @Column(nullable = false, length = 20, columnDefinition = "VARCHAR(50)")
     private ServerType serverType;
 
     @Column(length = 50)

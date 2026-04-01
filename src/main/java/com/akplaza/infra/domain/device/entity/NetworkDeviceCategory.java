@@ -2,5 +2,5 @@
 package com.akplaza.infra.domain.device.entity;
 
 public enum NetworkDeviceCategory {
-    L2_SWITCH, L3_SWITCH, L4_SWITCH, FIREWALL, VPN, ROUTER, ETC
+    L2_SWITCH, L3_SWITCH, L4_SWITCH, L7_SWITCH, FIREWALL, VPN, ROUTER, ETC
 }

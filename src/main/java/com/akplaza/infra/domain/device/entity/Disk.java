@@ -37,7 +37,7 @@ public class Disk extends BaseTimeEntity {
     private Server server;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20)
+    @Column(nullable = false, length = 20, columnDefinition = "VARCHAR(50)")
     private DiskType type; // 디스크 타입
 
     @Column(nullable = false)

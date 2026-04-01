@@ -14,10 +14,10 @@ import lombok.NoArgsConstructor;
 public class ServerUpdateRequest {
     // 식별자(HostName)나 ServerType은 쉽게 변경되지 않으므로 수정 항목에서 제외하거나 엄격히 관리
     @NotBlank(message = "변경할 서버명(HostName)은 필수 입력값입니다.")
-    private String name;
+    private String hostName;
 
     @NotNull(message = "서버 카테고리는 필수입니다.")
-    private ServerCategory category;
+    private ServerCategory serverCategory;
 
     @NotNull(message = "운영 환경(Environment)은 필수입니다.")
     private Environment environment;

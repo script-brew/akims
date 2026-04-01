@@ -26,7 +26,7 @@ public class SoftwareResponse {
 
         if (software.getServer() != null) {
             this.serverId = software.getServer().getId();
-            this.serverName = software.getServer().getName();
+            this.serverName = software.getServer().getHostName();
         }
     }
 }

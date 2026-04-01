@@ -7,6 +7,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.akplaza.infra.domain.network.dto.IpCidrCreateRequest;
+import com.akplaza.infra.domain.network.dto.IpCidrDetailResponse;
+import com.akplaza.infra.domain.network.dto.IpCidrResponse;
 import com.akplaza.infra.domain.network.dto.IpCreateRequest;
 import com.akplaza.infra.domain.network.dto.IpResponse;
 import com.akplaza.infra.domain.network.entity.AssignedType;
@@ -143,5 +145,43 @@ public class IpService {
         return ipRepository.findByAssignedTypeAndAssignedId(type, targetId).stream()
                 .map(IpResponse::new)
                 .collect(Collectors.toList());
+    }
+
+    public List<IpCidrResponse> getAllIpCidrs() {
+        return ipCidrRepository.findAll().stream()
+                .map(IpCidrResponse::new)
+                .collect(Collectors.toList());
+    }
+
+    // 🌟 추가 2: Visual IP Map을 위한 특정 대역 상세 조회 (IP 목록 포함)
+    public IpCidrDetailResponse getIpCidrDetail(Long cidrId) {
+        IpCidr ipCidr = ipCidrRepository.findById(cidrId)
+                .orElseThrow(() -> new ResourceNotFoundException("IP 대역을 찾을 수 없습니다. ID: " + cidrId));
+
+        // 해당 대역(cidrId)에 속한 IP들만 조회하여 DTO로 변환
+        List<IpResponse> ipResponses = ipRepository.findByIpCidrId(cidrId).stream()
+                .map(IpResponse::new)
+                .collect(Collectors.toList());
+
+        return new IpCidrDetailResponse(ipCidr, ipResponses);
+    }
+
+    // 🌟 추가 3: IP 대역 삭제 (하위에 할당된 IP가 있으면 삭제 방지)
+    @Transactional
+    public void deleteIpCidr(Long cidrId) {
+        IpCidr ipCidr = ipCidrRepository.findById(cidrId)
+                .orElseThrow(() -> new ResourceNotFoundException("IP 대역을 찾을 수 없습니다."));
+
+        // 대역 내에 누군가 사용 중(isUsed = true)인 IP가 단 하나라도 있다면 삭제 불가!
+        boolean hasUsedIps = ipRepository.findByIpCidrId(cidrId).stream()
+                .anyMatch(Ip::isUsed);
+
+        if (hasUsedIps) {
+            throw new ResourceInUseException("해당 대역 내에 현재 장비에 할당되어 사용 중인 IP가 존재하여 대역을 삭제할 수 없습니다.");
+        }
+
+        // 사용 중인 IP가 없다면, 대역 내의 IP 풀을 모두 지우고 대역 자체를 삭제
+        ipRepository.deleteByIpCidrId(cidrId);
+        ipCidrRepository.delete(ipCidr);
     }
 }

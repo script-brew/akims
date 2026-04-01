@@ -8,11 +8,14 @@ const modalTitle = document.getElementById("modal-title");
 // Form Inputs
 const inputId = document.getElementById("srv-id");
 const inputHostName = document.getElementById("srv-hostname");
+const selEnvironment = document.getElementById("srv-environment");
 const selCategory = document.getElementById("srv-category");
 const selType = document.getElementById("srv-type");
 const inputOs = document.getElementById("srv-os");
 const inputCpu = document.getElementById("srv-cpu");
 const inputRam = document.getElementById("srv-ram");
+const selIpCidr = document.getElementById("srv-ip-cidr");
+const inputIpAddress = document.getElementById("srv-ip-address");
 const selHardware = document.getElementById("srv-hardware");
 const inputDesc = document.getElementById("srv-desc");
 const hardwareMappingArea = document.getElementById("hardware-mapping-area");
@@ -27,13 +30,34 @@ const btnSave = document.getElementById("btn-save");
 // --- State ---
 let serverList = [];
 let hardwareList = [];
+let cidrList = [];
 
 // --- Init ---
 document.addEventListener("DOMContentLoaded", async () => {
   await loadHardwares(); // 하드웨어 매핑용
+  await loadCidrs(); // 🌟 IP 대역 로드
   await loadServers();
   setupEventListeners();
 });
+
+// 🌟 추가: IP 대역 목록 불러오기
+async function loadCidrs() {
+  try {
+    cidrList = await api.get("/api/v1/ip-cidrs");
+    const options = cidrList
+      .map(
+        (cidr) =>
+          `<option value="${cidr.id}">${cidr.cidrBlock} (${
+            cidr.description || "이름 없음"
+          })</option>`
+      )
+      .join("");
+    selIpCidr.innerHTML =
+      `<option value="">-- 대역 선택 (연동 안함) --</option>` + options;
+  } catch (error) {
+    console.error("IP 대역 목록 로드 실패", error);
+  }
+}
 
 // --- API Calls ---
 async function loadHardwares() {
@@ -151,18 +175,19 @@ function setupEventListeners() {
 // --- Actions (Modal & API) ---
 function openCreateModal() {
   inputId.value = "";
-  inputHostName.value = "";
   selCategory.value = "WEB";
+  inputHostName.value = "";
+  selEnvironment.value = "PRD"; // 🌟 초기값
   selType.value = "VIRTUAL";
   inputOs.value = "";
   inputCpu.value = 4;
   inputRam.value = 8;
+  selIpCidr.value = ""; // 🌟 초기값
+  inputIpAddress.value = ""; // 🌟 초기값
   selHardware.value = "";
   inputDesc.value = "";
 
-  // 초기 동적 UI 세팅
   hardwareMappingArea.style.display = "block";
-
   ui.openModal("srv-modal", "modal-title", "새 서버 등록");
 }
 
@@ -181,14 +206,18 @@ function closeModal() {
 
 async function saveServer() {
   const hwIdVal = selHardware.value === "" ? null : parseInt(selHardware.value);
+  const cidrIdVal = selIpCidr.value === "" ? null : parseInt(selIpCidr.value); // 🌟 파싱
 
   const requestData = {
     hostName: inputHostName.value.trim(),
+    environment: selEnvironment.value, // 🌟 전송
     serverCategory: selCategory.value,
     serverType: selType.value,
     os: inputOs.value.trim(),
     cpuCore: parseInt(inputCpu.value),
     memoryGb: parseInt(inputRam.value),
+    ipCidrId: cidrIdVal, // 🌟 전송
+    ipAddress: inputIpAddress.value.trim(), // 🌟 전송
     hardwareId: hwIdVal,
     description: inputDesc.value.trim(),
   };
@@ -203,7 +232,7 @@ async function saveServer() {
     }
     ui.closeModal("srv-modal");
     loadServers();
-    checkAll.checked = false;
+    ui.clearCheckAll("check-all");
   } catch (error) {
     // api.js가 에러 처리
   }

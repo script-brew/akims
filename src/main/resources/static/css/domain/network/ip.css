@@ -1,0 +1,113 @@
+/* IP 대역 시각화 (Visual IP Map) 컨테이너 */
+.ip-map-container {
+  margin-top: 20px;
+  padding: 20px;
+  background-color: white;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  display: none; /* 대역을 선택하기 전에는 숨김 */
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+}
+
+.ip-map-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 10px;
+  border-bottom: 2px solid var(--border-color);
+}
+
+.ip-map-title {
+  font-size: 1.2rem;
+  font-weight: bold;
+  color: var(--primary-color);
+}
+
+/* 🌟 16x16 = 256개의 그리드 레이아웃 */
+.ip-grid {
+  display: grid;
+  grid-template-columns: repeat(16, 1fr);
+  gap: 4px; /* 네모칸 사이의 간격 */
+}
+
+/* 개별 IP 네모칸 */
+.ip-box {
+  aspect-ratio: 1 / 1; /* 정사각형 유지 */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  font-weight: bold;
+  color: #555;
+  background-color: #ecf0f1; /* 기본(미사용) 색상: 옅은 회색 */
+  border: 1px solid #bdc3c7;
+  border-radius: 3px;
+  cursor: pointer;
+  position: relative;
+  transition: transform 0.1s, box-shadow 0.1s;
+}
+
+.ip-box:hover {
+  transform: scale(1.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  z-index: 10;
+}
+
+/* 🌟 상태별 색상 (사용 중, 예약 등) */
+.ip-used-server {
+  background-color: #3498db;
+  color: white;
+  border-color: #2980b9;
+} /* 서버 할당: 파란색 */
+.ip-used-network {
+  background-color: #e74c3c;
+  color: white;
+  border-color: #c0392b;
+} /* 네트워크 장비 할당: 빨간색 */
+.ip-gateway {
+  background-color: #f39c12;
+  color: white;
+  border-color: #d35400;
+} /* 게이트웨이/예약: 주황색 */
+
+/* 🌟 툴팁 (Tooltip) 스타일 */
+.ip-box::after {
+  content: attr(data-tooltip); /* HTML의 data-tooltip 속성값을 읽어옴 */
+  position: absolute;
+  bottom: 120%;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: rgba(0, 0, 0, 0.85);
+  color: white;
+  padding: 6px 10px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  white-space: nowrap;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.2s;
+  z-index: 100;
+  pointer-events: none;
+}
+.ip-box::before {
+  /* 툴팁 화살표 */
+  content: "";
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border-width: 5px;
+  border-style: solid;
+  border-color: rgba(0, 0, 0, 0.85) transparent transparent transparent;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.2s;
+  z-index: 100;
+}
+
+.ip-box:hover::after,
+.ip-box:hover::before {
+  opacity: 1;
+  visibility: visible;
+}

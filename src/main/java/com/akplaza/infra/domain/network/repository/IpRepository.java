@@ -22,4 +22,8 @@ public interface IpRepository extends JpaRepository<Ip, Long> {
 
     // IP 중복 검사
     boolean existsByIpAddress(String ipAddress);
+
+    // IP 대역 삭제
+    void deleteByIpCidrId(Long ipCidrId);
+
 }

@@ -24,7 +24,7 @@ public class DiskResponse {
 
         if (disk.getServer() != null) {
             this.serverId = disk.getServer().getId();
-            this.serverName = disk.getServer().getName();
+            this.serverName = disk.getServer().getHostName();
         }
     }
 }

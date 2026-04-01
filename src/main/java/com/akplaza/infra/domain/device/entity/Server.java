@@ -44,11 +44,11 @@ public class Server extends BaseTimeEntity {
     private Hardware hardware;
 
     @Column(nullable = false, unique = true, length = 100)
-    private String name; // 서버명 (hostname)
+    private String hostName; // 서버명 (hostname)
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
-    private ServerCategory category;
+    private ServerCategory serverCategory;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
@@ -89,12 +89,12 @@ public class Server extends BaseTimeEntity {
     // IP relationship will be added later when the IP entity is created.
 
     @Builder
-    public Server(Hardware hardware, String name, ServerCategory category, Environment environment,
+    public Server(Hardware hardware, String hostName, ServerCategory serverCategory, Environment environment,
             ServerType serverType, String platform, String os, String description, ServerSpec spec,
             boolean ha, String backupInfo, String monitoringInfo) {
         this.hardware = hardware;
-        this.name = name;
-        this.category = category;
+        this.hostName = hostName;
+        this.serverCategory = serverCategory;
         this.environment = environment;
         this.serverType = serverType;
         this.platform = platform;
@@ -149,12 +149,12 @@ public class Server extends BaseTimeEntity {
                 .sum();
     }
 
-    public void updateServerInfo(String name, ServerCategory category, Environment environment,
+    public void updateServerInfo(String hostName, ServerCategory serverCategory, Environment environment,
             String os, String description, ServerSpec spec,
             boolean ha, String backupInfo, String monitoringInfo,
             Hardware hardware) {
-        this.name = name;
-        this.category = category;
+        this.hostName = hostName;
+        this.serverCategory = serverCategory;
         this.environment = environment;
         this.os = os;
         this.description = description;

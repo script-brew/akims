@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+  <head>
+    <meta charset="UTF-8" />
+    <title>AKIMS - IP 자산 관리</title>
+    <link rel="stylesheet" th:href="@{/css/common.css}" />
+    <link rel="stylesheet" th:href="@{/css/layout.css}" />
+    <link rel="stylesheet" th:href="@{/css/components.css}" />
+    <link rel="stylesheet" th:href="@{/css/domain/network/ip.css}" />
+  </head>
+  <body>
+    <header th:replace="~{layout/header :: headerFragment}"></header>
+
+    <div class="app-body">
+      <aside th:replace="~{layout/sidebar :: sidebarFragment}"></aside>
+
+      <main class="app-main">
+        <div class="content-header">
+          <h2>IP 대역(CIDR) 및 자산 관리</h2>
+          <div class="header-actions">
+            <button id="btn-open-modal" class="btn">새 IP 대역 등록</button>
+            <button id="btn-delete-cidr" class="btn danger">
+              선택 대역 삭제
+            </button>
+          </div>
+        </div>
+
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th width="5%">
+                <input type="checkbox" id="check-all" class="data-checkbox" />
+              </th>
+              <th width="30%">IP 대역 (CIDR Block)</th>
+              <th width="45%">설명 (용도)</th>
+              <th width="20%">관리</th>
+            </tr>
+          </thead>
+          <tbody id="cidr-table-body">
+            <tr>
+              <td colspan="4" style="text-align: center">
+                데이터를 불러오는 중입니다...
+              </td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div id="ip-map-container" class="ip-map-container">
+          <div class="ip-map-header">
+            <div class="ip-map-title" id="map-title">선택된 대역: -</div>
+            <div style="font-size: 0.8rem; color: #777">
+              <span
+                style="
+                  display: inline-block;
+                  width: 12px;
+                  height: 12px;
+                  background: #ecf0f1;
+                  border: 1px solid #ccc;
+                  margin-left: 10px;
+                "
+              ></span>
+              미사용
+              <span
+                style="
+                  display: inline-block;
+                  width: 12px;
+                  height: 12px;
+                  background: #3498db;
+                  margin-left: 10px;
+                "
+              ></span>
+              서버 할당
+              <span
+                style="
+                  display: inline-block;
+                  width: 12px;
+                  height: 12px;
+                  background: #e74c3c;
+                  margin-left: 10px;
+                "
+              ></span>
+              네트워크 할당
+            </div>
+          </div>
+          <div id="ip-grid" class="ip-grid"></div>
+        </div>
+      </main>
+    </div>
+
+    <footer th:replace="~{layout/footer :: footerFragment}"></footer>
+
+    <div id="cidr-modal" class="modal-overlay">
+      <div class="modal-content">
+        <h3 id="modal-title">새 IP 대역 등록</h3>
+        <div class="form-group full">
+          <label for="cidr-block">CIDR 대역 (예: 10.10.10.0/24)</label>
+          <input type="text" id="cidr-block" placeholder="192.168.1.0/24" />
+          <small style="color: #7f8c8d"
+            >※ 현재는 C클래스(/24, 256개) 시각화에 최적화되어 있습니다.</small
+          >
+        </div>
+        <div class="form-group full">
+          <label for="cidr-desc">대역 설명 / 용도</label>
+          <input
+            type="text"
+            id="cidr-desc"
+            placeholder="예: 상암 IDC WEB 서버 대역"
+          />
+        </div>
+        <div class="modal-actions">
+          <button id="btn-cancel" class="btn cancel">취소</button>
+          <button id="btn-save" class="btn">등록</button>
+        </div>
+      </div>
+    </div>
+
+    <script type="module" th:src="@{/js/network/ip.js}"></script>
+  </body>
+</html>

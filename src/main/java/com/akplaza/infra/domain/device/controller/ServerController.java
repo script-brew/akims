@@ -36,7 +36,7 @@ public class ServerController {
     @Operation(summary = "서버 등록", description = "새로운 서버 인스턴스를 등록합니다. IP 목록을 함께 전송하면 자동 할당됩니다.")
     @PostMapping
     public ResponseEntity<Long> createServer(@Valid @RequestBody ServerCreateRequest request) {
-        log.info("Server API: 등록 요청 - HostName: {}", request.getName());
+        log.info("Server API: 등록 요청 - HostName: {}", request.getHostName());
         Long serverId = serverService.createServer(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(serverId); // 201 Created
     }

@@ -55,19 +55,11 @@
     <footer th:replace="~{layout/footer :: footerFragment}"></footer>
 
     <div id="srv-modal" class="modal-overlay">
-      <div class="modal-content">
+      <div class="modal-content" style="width: 600px">
         <h3 id="modal-title">서버 인스턴스 등록</h3>
         <input type="hidden" id="srv-id" />
 
         <div class="form-row">
-          <div class="form-group">
-            <label for="srv-hostname">호스트명 (HostName) *</label>
-            <input
-              type="text"
-              id="srv-hostname"
-              placeholder="예: ak-prd-web01"
-            />
-          </div>
           <div class="form-group">
             <label for="srv-category">서버 용도 *</label>
             <select id="srv-category">
@@ -77,9 +69,26 @@
               <option value="UTIL">유틸/관리 서버</option>
             </select>
           </div>
+          <div class="form-group">
+            <label for="srv-hostname">호스트명 (HostName) *</label>
+            <input
+              type="text"
+              id="srv-hostname"
+              placeholder="예: ak-prd-web01"
+            />
+          </div>
         </div>
 
         <div class="form-row">
+          <div class="form-group">
+            <label for="srv-environment">운영 환경 *</label>
+            <select id="srv-environment">
+              <option value="PRD">운영 (PRD)</option>
+              <option value="STG">스테이징 (STG)</option>
+              <option value="DEV">개발 (DEV)</option>
+              <option value="DR">재해복구 (DR)</option>
+            </select>
+          </div>
           <div class="form-group">
             <label for="srv-type">서버 타입 *</label>
             <select id="srv-type">
@@ -88,6 +97,9 @@
               <option value="CLOUD">클라우드 (AWS, GCP 등)</option>
             </select>
           </div>
+        </div>
+
+        <div class="form-row">
           <div class="form-group">
             <label for="srv-os">운영체제 (OS) *</label>
             <input
@@ -96,16 +108,15 @@
               placeholder="예: CentOS 7.9, Win2019"
             />
           </div>
-        </div>
-
-        <div class="form-row">
-          <div class="form-group">
-            <label for="srv-cpu">CPU (Core) *</label>
-            <input type="number" id="srv-cpu" value="4" min="1" />
-          </div>
-          <div class="form-group">
-            <label for="srv-ram">Memory (GB) *</label>
-            <input type="number" id="srv-ram" value="8" min="1" />
+          <div class="form-group" style="display: flex; gap: 10px">
+            <div style="flex: 1">
+              <label for="srv-cpu">vCPU *</label>
+              <input type="number" id="srv-cpu" value="4" min="1" />
+            </div>
+            <div style="flex: 1">
+              <label for="srv-ram">Memory(GB) *</label>
+              <input type="number" id="srv-ram" value="8" min="1" />
+            </div>
           </div>
         </div>
 
@@ -116,6 +127,23 @@
             margin-bottom: 15px;
           "
         />
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="srv-ip-cidr">IP 대역 (CIDR) 연동</label>
+            <select id="srv-ip-cidr">
+              <option value="">-- 대역 선택 (연동 안함) --</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="srv-ip-address">할당 IP 주소</label>
+            <input
+              type="text"
+              id="srv-ip-address"
+              placeholder="예: 10.10.10.15"
+            />
+          </div>
+        </div>
 
         <div id="hardware-mapping-area" class="form-group full">
           <label for="srv-hardware">구동 물리 호스트 (Hardware)</label>
@@ -137,9 +165,7 @@
         </div>
 
         <div class="modal-actions">
-          <button id="btn-cancel" class="btn" style="background-color: #95a5a6">
-            취소
-          </button>
+          <button id="btn-cancel" class="btn cancel">취소</button>
           <button id="btn-save" class="btn">저장</button>
         </div>
       </div>

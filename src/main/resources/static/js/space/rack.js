@@ -1,4 +1,5 @@
 import { api } from "../common/api.js";
+import { ui } from "../common/ui.js";
 
 // --- DOM Elements ---
 const gridContainer = document.getElementById("rack-grid-container");
@@ -150,7 +151,7 @@ function renderVisualRacks() {
 // --- Event Listeners ---
 function setupEventListeners() {
   btnOpenModal.addEventListener("click", openCreateModal);
-  btnCancel.addEventListener("click", closeModal);
+  btnCancel.addEventListener("click", () => ui.closeModal("rack-modal"));
   btnSave.addEventListener("click", saveRack);
 }
 
@@ -162,7 +163,8 @@ function openCreateModal() {
   inputRackNo.value = "";
   inputRackName.value = "";
   inputRackSize.value = 42; // 기본 42U
-  modal.style.display = "flex";
+
+  ui.openModal("rack-modal", "modal-title", "랙 등록");
 }
 
 function closeModal() {
@@ -180,7 +182,7 @@ async function saveRack() {
   try {
     await api.post("/api/v1/racks", requestData);
     alert("등록되었습니다.");
-    closeModal();
+    ui.closeModal("rack-modal");
     loadRacks();
   } catch (error) {
     // api.js에서 오류 처리 완료

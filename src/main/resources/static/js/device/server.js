@@ -1,8 +1,8 @@
 import { api } from "../common/api.js";
+import { ui } from "../common/ui.js";
 
 // --- DOM Elements ---
 const tableBody = document.getElementById("server-table-body");
-const modal = document.getElementById("srv-modal");
 const modalTitle = document.getElementById("modal-title");
 
 // Form Inputs
@@ -23,7 +23,6 @@ const btnEdit = document.getElementById("btn-edit");
 const btnDelete = document.getElementById("btn-delete");
 const btnCancel = document.getElementById("btn-cancel");
 const btnSave = document.getElementById("btn-save");
-const checkAll = document.getElementById("check-all");
 
 // --- State ---
 let serverList = [];
@@ -104,7 +103,7 @@ function renderTable() {
 
       return `
             <tr>
-                <td><input type="checkbox" class="srv-checkbox srv-checkbox-item" data-id="${
+                <td><input type="checkbox" class="data-checkbox srv-checkbox-item" data-id="${
                   srv.id
                 }"></td>
                 <td><strong>${
@@ -131,16 +130,12 @@ function renderTable() {
 // --- Event Listeners ---
 function setupEventListeners() {
   btnOpenModal.addEventListener("click", openCreateModal);
-  btnCancel.addEventListener("click", closeModal);
+  btnCancel.addEventListener("click", () => ui.closeModal("srv-modal"));
   btnSave.addEventListener("click", saveServer);
   btnEdit.addEventListener("click", handleEditAction);
   btnDelete.addEventListener("click", handleDeleteAction);
 
-  checkAll.addEventListener("change", (e) => {
-    document
-      .querySelectorAll(".srv-checkbox-item")
-      .forEach((cb) => (cb.checked = e.target.checked));
-  });
+  ui.setupCheckAll("check-all", "srv-checkbox-item");
 
   // 🌟 15년 차의 디테일: 서버 타입에 따른 동적 UI 변경
   selType.addEventListener("change", (e) => {
@@ -168,37 +163,16 @@ function openCreateModal() {
   // 초기 동적 UI 세팅
   hardwareMappingArea.style.display = "block";
 
-  modalTitle.textContent = "새 서버 등록";
-  modal.style.display = "flex";
+  ui.openModal("srv-modal", "modal-title", "새 서버 등록");
 }
 
 function handleEditAction() {
-  const checkedBoxes = document.querySelectorAll(".srv-checkbox-item:checked");
-  if (checkedBoxes.length !== 1) {
-    alert("수정할 서버를 1개만 선택해주세요.");
+  const ids = ui.getCheckedIds("srv-checkbox-item"); // 🌟 ui 모듈로 선택된 ID 가져오기
+  if (ids.length !== 1) {
+    alert("수정할 항목을 1개만 선택해주세요.");
     return;
   }
-
-  const id = parseInt(checkedBoxes[0].getAttribute("data-id"));
-  const target = serverList.find((s) => s.id === id);
-  if (!target) return;
-
-  inputId.value = target.id;
-  inputHostName.value = target.hostName;
-  selCategory.value = target.serverCategory;
-  selType.value = target.serverType;
-  inputOs.value = target.os;
-  inputCpu.value = target.cpuCore;
-  inputRam.value = target.memoryGb;
-  selHardware.value = target.hardwareId || "";
-  inputDesc.value = target.description || "";
-
-  // 동적 UI 세팅
-  hardwareMappingArea.style.display =
-    target.serverType === "CLOUD" ? "none" : "block";
-
-  modalTitle.textContent = "서버 정보 수정";
-  modal.style.display = "flex";
+  openEditModal(parseInt(ids[0]));
 }
 
 function closeModal() {
@@ -227,7 +201,7 @@ async function saveServer() {
       await api.post("/api/v1/servers", requestData);
       alert("등록되었습니다.");
     }
-    closeModal();
+    ui.closeModal("srv-modal");
     loadServers();
     checkAll.checked = false;
   } catch (error) {
@@ -236,23 +210,21 @@ async function saveServer() {
 }
 
 async function handleDeleteAction() {
-  const checkedBoxes = document.querySelectorAll(".srv-checkbox-item:checked");
-  if (checkedBoxes.length === 0) {
-    alert("삭제할 서버를 선택해주세요.");
+  const ids = ui.getCheckedIds("srv-checkbox-item"); // 🌟 ui 모듈 사용
+  if (ids.length === 0) {
+    alert("삭제할 항목을 선택해주세요.");
     return;
   }
 
-  const ids = Array.from(checkedBoxes).map((cb) => cb.getAttribute("data-id"));
-  if (!confirm(`선택한 ${ids.length}대의 서버를 삭제하시겠습니까?`)) return;
+  if (!confirm(`선택한 ${ids.length}개의 장비를 정말 삭제하시겠습니까?`))
+    return;
 
   try {
-    for (const id of ids) {
-      await api.delete(`/api/v1/servers/${id}`);
-    }
+    for (const id of ids) await api.delete(`/api/v1/servers/${id}`);
     alert("삭제되었습니다.");
     loadServers();
-    checkAll.checked = false;
+    ui.clearCheckAll("check-all"); // 🌟 전체 선택 해제도 ui 모듈로
   } catch (error) {
-    console.error("서버 삭제 실패", error);
+    console.error("삭제 실패", error);
   }
 }

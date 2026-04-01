@@ -1,4 +1,5 @@
 import { api } from "../common/api.js";
+import { ui } from "../common/ui.js";
 
 // --- DOM Elements ---
 const tableBody = document.getElementById("location-table-body");
@@ -55,7 +56,7 @@ function renderTable() {
 // --- Event Listeners ---
 function setupEventListeners() {
   btnOpenModal.addEventListener("click", openCreateModal);
-  btnCancel.addEventListener("click", closeModal);
+  btnCancel.addEventListener("click", () => ui.closeModal("location-modal"));
   btnSave.addEventListener("click", saveLocation);
 }
 
@@ -63,8 +64,8 @@ function setupEventListeners() {
 function openCreateModal() {
   inputId.value = "";
   inputName.value = "";
-  modalTitle.textContent = "장소 등록";
-  modal.style.display = "flex";
+
+  ui.openModal("location-modal", "modal-title", "장소 등록");
 }
 
 function closeModal() {
@@ -86,7 +87,7 @@ async function saveLocation() {
       await api.post("/api/v1/locations", requestData);
       alert("등록되었습니다.");
     }
-    closeModal();
+    ui.closeModal("location-modal");
     loadLocations(); // 저장 후 목록 새로고침
   } catch (error) {
     // api.js에서 이미 에러 alert을 띄우므로 여기선 팝업을 닫지 않고 유지
@@ -114,6 +115,6 @@ window.editLocation = (id) => {
 
   inputId.value = target.id;
   inputName.value = target.name;
-  modalTitle.textContent = "장소 수정";
-  modal.style.display = "flex";
+
+  ui.openModal("location-modal", "modal-title", "장소 수정");
 };

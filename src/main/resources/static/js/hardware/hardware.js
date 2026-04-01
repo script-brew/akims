@@ -1,8 +1,8 @@
 import { api } from "../common/api.js";
+import { ui } from "../common/ui.js";
 
 // --- DOM Elements ---
 const tableBody = document.getElementById("hardware-table-body");
-const modal = document.getElementById("hw-modal");
 const modalTitle = document.getElementById("modal-title");
 
 // Form Inputs
@@ -23,7 +23,6 @@ const btnSave = document.getElementById("btn-save");
 
 const btnEdit = document.getElementById("btn-edit");
 const btnDelete = document.getElementById("btn-delete");
-const checkAll = document.getElementById("check-all");
 
 // --- State ---
 let hardwareList = [];
@@ -100,20 +99,21 @@ function renderTable() {
         : `<span class="badge" style="background:#2ecc71;">이중전원</span>`;
 
       // 🌟 4. 설명(이름) 정보
-      const description = hw.description || "-";
+      const safeDesc = ui.escapeHtml(hw.description || "-");
 
       const introductionYear = hw.introductionYear;
 
       // 🌟 5. 요청하신 순서대로 HTML <tr> 태그 조립 (ID 컬럼 제거)
       return `
             <tr>
-                <td><input type="checkbox" class="hw-checkbox hw-checkbox-item" data-id="${
+                <td><input type="checkbox" class="data-checkbox hw-checkbox-item" data-id="${
                   hw.id
-                }"></td> <td><strong>${locationName}</strong></td>
+                }"></td> 
+                <td><strong>${locationName}</strong></td>
                 <td><span class="badge ${getBadgeClass(hw.equipmentType)}">${
         hw.equipmentType
       }</span></td>
-                <td><div class="text-ellipsis" title="${description}">${description}</div></td>
+                <td><div class="text-ellipsis" title="${safeDesc}">${safeDesc}</div></td>
                 <td><strong>${hw.model}</strong></td>
                 <td>${hw.serialNo}</td>
                 <td>${introductionYear}</td>}
@@ -128,7 +128,7 @@ function renderTable() {
 // --- Event Listeners ---
 function setupEventListeners() {
   btnOpenModal.addEventListener("click", openCreateModal);
-  btnCancel.addEventListener("click", closeModal);
+  btnCancel.addEventListener("click", () => ui.closeModal("hw-modal"));
   btnSave.addEventListener("click", saveHardware);
 
   // 🌟 상단 수정 버튼 이벤트
@@ -137,11 +137,7 @@ function setupEventListeners() {
   // 🌟 상단 삭제 버튼 이벤트
   btnDelete.addEventListener("click", handleDeleteAction);
 
-  // 🌟 전체 선택/해제 이벤트
-  checkAll.addEventListener("change", (e) => {
-    const checkboxes = document.querySelectorAll(".hw-checkbox-item");
-    checkboxes.forEach((cb) => (cb.checked = e.target.checked));
-  });
+  ui.setupCheckAll("check-all", "hw-checkbox-item");
 }
 
 function openCreateModal() {
@@ -156,8 +152,7 @@ function openCreateModal() {
   inputPosition.value = "";
   inputDesc.value = "";
 
-  modalTitle.textContent = "하드웨어 장비 입고";
-  modal.style.display = "flex";
+  ui.openModal("hw-modal", "modal-title", "하드웨어 장비 입고");
 }
 
 function closeModal() {
@@ -192,7 +187,7 @@ async function saveHardware() {
       await api.post("/api/v1/hardwares", requestData);
       alert("등록되었습니다.");
     }
-    closeModal();
+    ui.closeModal("hw-modal");
     loadHardwares();
   } catch (error) {
     // api.js에서 오류 처리
@@ -214,8 +209,7 @@ function openEditModal(id) {
   inputPosition.value = target.rackPosition || "";
   inputDesc.value = target.description || "";
 
-  modalTitle.textContent = "하드웨어 정보 수정";
-  modal.style.display = "flex";
+  ui.openModal("hw-modal", "modal-title", "하드웨어 정보 수정");
 }
 
 window.deleteHardware = async (id) => {
@@ -237,51 +231,31 @@ window.deleteHardware = async (id) => {
 
 // --- 🌟 비즈니스 로직: 수정 Action ---
 function handleEditAction() {
-  const checkedBoxes = document.querySelectorAll(".hw-checkbox-item:checked");
-
-  if (checkedBoxes.length === 0) {
-    alert("수정할 항목을 선택해주세요.");
+  const ids = ui.getCheckedIds("hw-checkbox-item"); // 🌟 ui 모듈로 선택된 ID 가져오기
+  if (ids.length !== 1) {
+    alert("수정할 항목을 1개만 선택해주세요.");
     return;
   }
-
-  if (checkedBoxes.length > 1) {
-    alert("수정은 한 번에 하나의 항목만 가능합니다.");
-    return;
-  }
-
-  const id = checkedBoxes[0].getAttribute("data-id");
-  openEditModal(parseInt(id));
+  openEditModal(parseInt(ids[0]));
 }
 
 // --- 🌟 비즈니스 로직: 삭제 Action (Bulk Delete) ---
 async function handleDeleteAction() {
-  const checkedBoxes = document.querySelectorAll(".hw-checkbox-item:checked");
-
-  if (checkedBoxes.length === 0) {
+  const ids = ui.getCheckedIds("hw-checkbox-item"); // 🌟 ui 모듈 사용
+  if (ids.length === 0) {
     alert("삭제할 항목을 선택해주세요.");
     return;
   }
 
-  const ids = Array.from(checkedBoxes).map((cb) => cb.getAttribute("data-id"));
-
-  // 팝업창 재차 확인
-  if (
-    !confirm(
-      `선택한 ${ids.length}개의 장비를 정말 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.`
-    )
-  ) {
+  if (!confirm(`선택한 ${ids.length}개의 장비를 정말 삭제하시겠습니까?`))
     return;
-  }
 
   try {
-    // 루프를 돌며 삭제 처리 (백엔드에 벌크 삭제 API가 있다면 하나로 합칠 수 있음)
-    for (const id of ids) {
-      await api.delete(`/api/v1/hardwares/${id}`);
-    }
-    alert("성공적으로 삭제되었습니다.");
+    for (const id of ids) await api.delete(`/api/v1/hardwares/${id}`);
+    alert("삭제되었습니다.");
     loadHardwares();
-    checkAll.checked = false; // 전체 선택 해제
+    ui.clearCheckAll("check-all"); // 🌟 전체 선택 해제도 ui 모듈로
   } catch (error) {
-    console.error("삭제 중 오류 발생", error);
+    console.error("삭제 실패", error);
   }
 }

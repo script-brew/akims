@@ -25,4 +25,8 @@ public class NetworkDeviceUpdateRequest {
     private boolean ha;
     private String monitoringInfo;
     private Long hardwareId;
+
+    private Long ipCidrId;
+    private String ipAddress;
+
 }

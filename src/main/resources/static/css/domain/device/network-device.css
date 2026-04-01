@@ -1,0 +1,32 @@
+/* 네트워크 장비 카테고리 뱃지 */
+.badge {
+  padding: 3px 8px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: bold;
+  color: white;
+  display: inline-block;
+  text-align: center;
+  min-width: 60px;
+}
+.badge-router {
+  background-color: #e67e22;
+} /* 라우터: 주황색 */
+.badge-switch {
+  background-color: #2ecc71;
+} /* 스위치: 초록색 */
+.badge-firewall {
+  background-color: #e74c3c;
+} /* 방화벽: 빨간색 */
+.badge-vpn {
+  background-color: #8e44ad;
+} /* VPN: 보라색 */
+.badge-l4 {
+  background-color: #3498db;
+} /* L4 스위치: 파란색 */
+.badge-l7 {
+  background-color: #2980b9;
+} /* L7 스위치: 짙은 파란색 */
+.badge-etc {
+  background-color: #95a5a6;
+} /* 기타: 회색 */

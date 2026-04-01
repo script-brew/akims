@@ -46,6 +46,12 @@ public class ViewController {
         return "device/server";
     }
 
+    // 🌟 추가: 네트워크 장비 관리 화면 라우팅
+    @GetMapping("/view/network-devices")
+    public String networkDevices() {
+        return "device/network-device";
+    }
+
     // 🌟 추가: IP 관리 화면 라우팅
     @GetMapping("/view/ips")
     public String ips() {

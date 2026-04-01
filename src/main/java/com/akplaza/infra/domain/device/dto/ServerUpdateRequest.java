@@ -40,4 +40,7 @@ public class ServerUpdateRequest {
     private String monitoringInfo;
 
     private Long hardwareId; // 하드웨어 교체 시 사용
+
+    private Long ipCidrId; // 할당된 IP 대역
+    private String ipAddress;
 }

@@ -84,13 +84,13 @@ function renderTable() {
 
       // 🌟 2. 랙 실장 위치 정보 조합
       const rackDisplayName = hw.rackNo
-        ? `${hw.rackNo}(${hw.rackName || ""})`
+        ? `${hw.rackNo}`
         : targetRack
         ? `${targetRack.rackNo}`
         : "명칭미정";
 
       const rackInfo = hw.rackId
-        ? `${rackDisplayName}-${hw.rackPosition}U`
+        ? `${rackDisplayName} / ${hw.rackPosition} Slot`
         : `<span style="color:#999;">창고 보관</span>`;
 
       // 🌟 3. 전원 상태 뱃지
@@ -108,7 +108,7 @@ function renderTable() {
             <tr>
                 <td><input type="checkbox" class="data-checkbox hw-checkbox-item" data-id="${
                   hw.id
-                }"></td> 
+                }"></td>
                 <td><strong>${locationName}</strong></td>
                 <td><span class="badge ${getBadgeClass(hw.equipmentType)}">${
         hw.equipmentType
@@ -116,7 +116,7 @@ function renderTable() {
                 <td><div class="text-ellipsis" title="${safeDesc}">${safeDesc}</div></td>
                 <td><strong>${hw.model}</strong></td>
                 <td>${hw.serialNo}</td>
-                <td>${introductionYear}</td>}
+                <td>${introductionYear}</td>
                 <td>${rackInfo}</td>
                 <td>${powerBadge}</td>
             </tr>

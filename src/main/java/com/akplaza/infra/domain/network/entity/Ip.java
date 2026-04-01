@@ -41,7 +41,7 @@ public class Ip extends BaseTimeEntity {
     private boolean isUsed; // 사용 유무 (true: 사용중, false: 미사용)
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20)
+    @Column(nullable = false, length = 20, columnDefinition = "VARCHAR(50)")
     private AssignedType assignedType; // 사용 대상 종류
 
     private Long assignedId; // 사용 대상의 ID (Server ID 또는 NetworkDevice ID)

@@ -40,25 +40,50 @@ public class IpService {
      * 특정 장비에 IP를 할당합니다. (ServerService 등에서 트랜잭션 내에 호출됨)
      */
     @Transactional
-    public void allocateIp(String ipAddress, AssignedType targetType, Long targetId) {
+    public void allocateIp(Long ipCidrId, String ipAddress, AssignedType targetType, Long targetId) {
+        if (ipCidrId == null || ipAddress == null || ipAddress.isBlank())
+            return;
+
         log.debug("IP 할당 프로세스 진입 - IP: {}, 대상 타입: {}, 대상 ID: {}", ipAddress, targetType, targetId);
 
-        // [예외 포인트 1] 등록된 IP인지 확인
-        Ip ip = ipRepository.findByIpAddress(ipAddress)
-                .orElseThrow(() -> {
-                    log.error("IP 할당 실패 - 시스템에 미등록된 IP 주소: {}", ipAddress);
-                    return new ResourceNotFoundException("등록되지 않은 IP 주소입니다. 먼저 IP 자산을 등록해주세요: " + ipAddress);
-                });
+        // 🚨 1. 방어 로직: IP 대역(CIDR) 존재 여부 및 범위 검증
+        IpCidr ipCidr = ipCidrRepository.findById(ipCidrId)
+                .orElseThrow(() -> new ResourceNotFoundException("IP 대역을 찾을 수 없습니다."));
 
-        // [예외 포인트 2] 이미 사용 중인지 확인 (동시성 방지)
-        if (ip.isUsed()) {
-            log.error("IP 할당 실패 - 이미 점유된 IP: {} (현재 소유: {})", ipAddress, ip.getAssignedType());
-            throw new ResourceInUseException("이미 다른 장비에 할당되어 사용 중인 IP입니다: " + ipAddress);
+        String cidrBlock = ipCidr.getCidrBlock(); // 예: 10.10.10.0/24
+        String networkPrefix = cidrBlock.substring(0, cidrBlock.lastIndexOf(".") + 1); // 10.10.10.
+
+        if (!ipAddress.startsWith(networkPrefix)) {
+            throw new IllegalArgumentException(
+                    String.format("입력한 IP(%s)가 선택한 대역(%s) 범위에 맞지 않습니다.", ipAddress, cidrBlock));
         }
 
-        // 엔티티 내부 메서드를 통한 상태 변경 (객체지향 설계)
-        ip.allocate(targetType, targetId);
-        log.info("IP 할당 성공 - IP: {} -> Target [Type: {}, ID: {}]", ipAddress, targetType, targetId);
+        // 🚨 2. 할당 로직: 중복 검사 및 자동 생성
+        java.util.Optional<Ip> optionalIp = ipRepository.findByIpAddress(ipAddress);
+
+        if (optionalIp.isPresent()) {
+            Ip ip = optionalIp.get();
+            // 다른 장비가 이미 사용 중인지 확인 (자신이 점유한 거면 패스)
+            if (ip.isUsed() && !targetId.equals(ip.getAssignedId())) {
+                log.error("IP 할당 실패 - 이미 점유된 IP: {} (현재 소유: {})", ipAddress, ip.getAssignedType());
+                throw new ResourceInUseException("이미 다른 장비에 할당되어 사용 중인 IP입니다: " + ipAddress);
+            }
+            // 기존 IP 엔티티 상태 변경
+            ip.allocate(targetType, targetId);
+            log.info("기존 IP 할당 성공 - IP: {}", ipAddress);
+        } else {
+            // 시스템에 없는 IP라면 새롭게 생성하여 즉시 할당 (Visual IP Map 렌더링을 위함)
+            Ip newIp = Ip.builder()
+                    .ipAddress(ipAddress)
+                    .isUsed(false) // allocate 메서드에서 true로 바뀜
+                    .assignedType(AssignedType.NONE)
+                    .build();
+
+            ipCidr.addIp(newIp); // 연관관계 매핑
+            newIp.allocate(targetType, targetId); // 할당
+            ipRepository.save(newIp);
+            log.info("신규 IP 생성 및 할당 성공 - IP: {}", ipAddress);
+        }
     }
 
     /**

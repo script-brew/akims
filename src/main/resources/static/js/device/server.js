@@ -125,6 +125,15 @@ function renderTable() {
           })()
         : '<span style="color:#999;">- (클라우드/미할당) -</span>';
 
+      // (백엔드 ServerResponse가 assignedIps 리스트를 반환한다고 가정)
+      let ipDisplay = '<span style="color:#999;">미할당</span>';
+      if (srv.assignedIps && srv.assignedIps.length > 0) {
+        ipDisplay = `<strong>${srv.assignedIps[0]}</strong>`;
+      } else if (srv.ipAddress) {
+        // 혹시 단일 필드로 넘길 경우 대비
+        ipDisplay = `<strong>${srv.ipAddress}</strong>`;
+      }
+
       return `
             <tr>
                 <td><input type="checkbox" class="data-checkbox srv-checkbox-item" data-id="${
@@ -142,8 +151,7 @@ function renderTable() {
         srv.serverType
       }</span></td>
                 <td>${srv.cpuCore} Core / ${srv.memoryGb} GB</td>
-                <td><span style="color:#999;">IP 연동 예정</span></td>
-                <td>${hwInfo}</td>
+                <td>${ipDisplay}</td> <td>${hwInfo}</td>
                 <td>${srv.serverCategory}</td>
             </tr>
         `;
@@ -189,6 +197,34 @@ function openCreateModal() {
 
   hardwareMappingArea.style.display = "block";
   ui.openModal("srv-modal", "modal-title", "새 서버 등록");
+}
+
+function openEditModal(id) {
+  const target = serverList.find((s) => s.id === id);
+  if (!target) return;
+
+  inputId.value = target.id;
+  selCategory.value = target.serverCategory;
+  inputHostName.value = target.hostName;
+  selEnvironment.value = target.environment || "PRD";
+  selType.value = target.serverType;
+  inputOs.value = target.os;
+  inputCpu.value = target.cpuCore || target.spec?.cpuCore || 4;
+  inputRam.value = target.memoryGb || target.spec?.memoryGb || 8;
+  selIpCidr.value = target.ipCidrId || "";
+
+  // 할당된 IP를 인풋 박스에 세팅
+  inputIpAddress.value =
+    target.assignedIps && target.assignedIps.length > 0
+      ? target.assignedIps[0]
+      : target.ipAddress || "";
+
+  selHardware.value = target.hardwareId || "";
+  inputDesc.value = target.description || "";
+
+  hardwareMappingArea.style.display =
+    target.serverType === "CLOUD" ? "none" : "block";
+  ui.openModal("srv-modal", "modal-title", "서버 정보 수정");
 }
 
 function handleEditAction() {

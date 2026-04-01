@@ -30,5 +30,8 @@ public class NetworkDeviceCreateRequest {
 
     private Long hardwareId; // 물리 하드웨어 매핑 ID (가상 어플라이언스인 경우 null 허용)
 
+    private Long IpCidrId; // 할당된 IP 대역
+    private String ipAddress;
+
     private List<String> ipAddresses = new ArrayList<>(); // 할당할 IP 목록 (VIP, 관리 IP 등)
 }

@@ -127,11 +127,11 @@ function renderTable() {
 
       // (백엔드 ServerResponse가 assignedIps 리스트를 반환한다고 가정)
       let ipDisplay = '<span style="color:#999;">미할당</span>';
-      if (srv.assignedIps && srv.assignedIps.length > 0) {
-        ipDisplay = `<strong>${srv.assignedIps[0]}</strong>`;
+      if (srv.ipAddresses && srv.ipAddresses.length > 0) {
+        ipDisplay = `<strong>${srv.ipAddresses[0]}</strong>`;
       } else if (srv.ipAddress) {
         // 혹시 단일 필드로 넘길 경우 대비
-        ipDisplay = `<strong>${srv.ipAddress}</strong>`;
+        ipDisplay = `<strong>${srv.ipAddresses[0]}</strong>`;
       }
 
       return `

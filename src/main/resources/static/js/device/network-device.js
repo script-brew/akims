@@ -122,10 +122,10 @@ function renderTable() {
         : '<span style="color:#999;">미할당</span>';
 
       let ipDisplay = '<span style="color:#999;">미할당</span>';
-      if (dev.assignedIps && dev.assignedIps.length > 0) {
-        ipDisplay = `<strong>${dev.assignedIps[0]}</strong>`;
-      } else if (dev.ipAddress) {
-        ipDisplay = `<strong>${dev.ipAddress}</strong>`;
+      if (dev.ipAddresses && dev.ipAddresses.length > 0) {
+        ipDisplay = `<strong>${dev.ipAddresses[0]}</strong>`;
+      } else if (dev.ipAddresses) {
+        ipDisplay = `<strong>${dev.ipAddresses[0]}</strong>`;
       }
 
       const safeDesc = ui.escapeHtml(dev.description || "-");
@@ -135,10 +135,11 @@ function renderTable() {
                 <td><input type="checkbox" class="data-checkbox nd-checkbox-item" data-id="${
                   dev.id
                 }"></td>
-                <td><strong>${dev.deviceName}</strong></td>
-                <td><span class="badge ${getCategoryBadge(
-                  dev.deviceCategory
-                )}">${dev.deviceCategory}</span></td>
+                <td><strong>${dev.name}</strong></td>
+                <td><span class="badge ${getCategoryBadge(dev.category)}">${
+        dev.category
+      }</span></td>
+                <td>${dev.os}</td>
                 <td>${ipDisplay}</td>
                 <td>${hwInfo}</td>
                 <td><div class="text-ellipsis" title="${safeDesc}">${safeDesc}</div></td>

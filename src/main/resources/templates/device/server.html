@@ -36,6 +36,7 @@
               <th width="12%">운영체제(OS)</th>
               <th width="12%">서버 타입</th>
               <th width="12%">스펙(vCPU/RAM)</th>
+              <th width="10%">디스크</th>
               <th width="15%">IP 주소</th>
               <th width="20%">물리 호스트 (Hardware)</th>
               <th width="10%">용도</th>
@@ -161,6 +162,46 @@
               "
             ></div>
           </div>
+        </div>
+        <hr
+          style="
+            border: 0;
+            border-top: 1px solid var(--border-color);
+            margin: 15px 0;
+          "
+        />
+
+        <div class="form-group full">
+          <div
+            style="
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              margin-bottom: 5px;
+            "
+          >
+            <label style="margin: 0">디스크 (Storage) 목록</label>
+            <button
+              type="button"
+              id="btn-add-disk"
+              class="btn small"
+              style="background-color: #8e44ad"
+            >
+              + 디스크 추가
+            </button>
+          </div>
+          <div
+            id="disk-list-container"
+            style="
+              display: flex;
+              flex-direction: column;
+              gap: 10px;
+              background: #f8f9fa;
+              padding: 10px;
+              border-radius: 4px;
+              border: 1px solid var(--border-color);
+            "
+          ></div>
         </div>
 
         <div id="hardware-mapping-area" class="form-group full">

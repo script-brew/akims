@@ -99,19 +99,34 @@
             <label for="hw-size">크기 (U) *</label>
             <input type="number" id="hw-size" value="1" min="1" />
           </div>
-        </div>
-        <div class="form-row">
           <div class="form-group">
-            <label>전원 이중화 여부</label>
-            <div style="margin-top: 8px">
+            <label style="margin: 0">전원 이중화 여부</label>
+            <label
+              for="hw-single-power"
+              style="
+                display: inline-flex;
+                flex-direction: row;
+                align-items: center;
+                gap: 6px;
+                margin: 0;
+                font-weight: normal;
+                cursor: pointer;
+              "
+            >
               <input
                 type="checkbox"
                 id="hw-single-power"
                 class="data-checkbox"
+                style="margin: 0; width: 16px; height: 16px; cursor: pointer"
               />
-              단일 전원
-            </div>
+              <span style="padding-top: 2px"
+                >단일 전원 (Single Power) 장비</span
+              >
+            </label>
           </div>
+        </div>
+
+        <div class="form-row">
           <div
             class="form-group"
             id="hw-power-line-group"

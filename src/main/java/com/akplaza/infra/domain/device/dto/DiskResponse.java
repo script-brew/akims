@@ -8,7 +8,7 @@ import lombok.Getter;
 @Getter
 public class DiskResponse {
     private Long id;
-    private String type;
+    private String diskType;
     private Integer size;
     private String mountPoint;
 
@@ -18,7 +18,7 @@ public class DiskResponse {
 
     public DiskResponse(Disk disk) {
         this.id = disk.getId();
-        this.type = disk.getType().name();
+        this.diskType = disk.getDiskType().name();
         this.size = disk.getSize();
         this.mountPoint = disk.getMountPoint();
 

@@ -3,6 +3,7 @@ package com.akplaza.infra.domain.device.dto;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import com.akplaza.infra.domain.device.entity.Disk;
 import com.akplaza.infra.domain.device.entity.Server;
 import com.akplaza.infra.domain.network.dto.IpAssignRequest;
 import com.akplaza.infra.domain.network.entity.Ip;
@@ -30,9 +31,10 @@ public class ServerResponse {
 
     // IP 목록 (IpService 등을 통해 주입)
     private List<IpAssignRequest> ips;
+    private List<DiskResponse> disks;
 
     // 엔티티를 DTO로 변환하는 생성자
-    public ServerResponse(Server server, List<Ip> assignedIps) {
+    public ServerResponse(Server server, List<Ip> assignedIps, List<Disk> disks) {
         this.id = server.getId();
         this.hostName = server.getHostName();
         this.serverCategory = server.getServerCategory().name();
@@ -59,6 +61,9 @@ public class ServerResponse {
             this.ips = assignedIps.stream()
                     .map(ip -> new IpAssignRequest(ip.getIpCidr().getId(), ip.getIpAddress()))
                     .collect(Collectors.toList());
+        }
+        if (disks != null) {
+            this.disks = disks.stream().map(DiskResponse::new).collect(Collectors.toList());
         }
     }
 }

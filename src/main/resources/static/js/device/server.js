@@ -20,7 +20,7 @@ const selHardware = document.getElementById("srv-hardware");
 const inputDesc = document.getElementById("srv-desc");
 const hardwareMappingArea = document.getElementById("hardware-mapping-area");
 const ipListContainer = document.getElementById("ip-list-container");
-
+const diskListContainer = document.getElementById("disk-list-container");
 // Buttons
 const btnOpenModal = document.getElementById("btn-open-modal");
 const btnEdit = document.getElementById("btn-edit");
@@ -28,7 +28,7 @@ const btnDelete = document.getElementById("btn-delete");
 const btnCancel = document.getElementById("btn-cancel");
 const btnSave = document.getElementById("btn-save");
 const btnAddIp = document.getElementById("btn-add-ip");
-
+const btnAddDisk = document.getElementById("btn-add-disk");
 // --- State ---
 let serverList = [];
 let hardwareList = [];
@@ -139,6 +139,36 @@ function createIpRow(cidrId = "", ip = "") {
   ipListContainer.appendChild(row);
 }
 
+function createDiskRow(type = "SSD", capacity = 100, mount = "/") {
+  const row = document.createElement("div");
+  row.className = "disk-row form-row";
+  row.style.marginBottom = "0";
+
+  row.innerHTML = `
+        <select class="disk-type-sel" style="flex:1;">
+            <option value="HDD" ${type === "HDD" ? "selected" : ""}>HDD</option>
+            <option value="SSD" ${type === "SSD" ? "selected" : ""}>SSD</option>
+            <option value="NVME" ${
+              type === "NVME" ? "selected" : ""
+            }>NVMe</option>
+            <option value="SAN" ${
+              type === "SAN" ? "selected" : ""
+            }>SAN 스토리지</option>
+            <option value="NAS" ${
+              type === "NAS" ? "selected" : ""
+            }>NAS 마운트</option>
+        </select>
+        <input type="number" class="disk-cap-input" placeholder="용량(GB)" value="${capacity}" min="1" style="flex:1;">
+        <input type="text" class="disk-mount-input" placeholder="마운트 (예: /data, C:)" value="${mount}" style="flex:1;">
+        <button type="button" class="btn small danger btn-remove-disk">X</button>
+    `;
+
+  row
+    .querySelector(".btn-remove-disk")
+    .addEventListener("click", () => row.remove());
+  diskListContainer.appendChild(row);
+}
+
 function renderTable() {
   if (serverList.length === 0) {
     tableBody.innerHTML = `<tr><td colspan="8" style="text-align:center;">등록된 서버가 없습니다.</td></tr>`;
@@ -165,7 +195,12 @@ function renderTable() {
           .join("<br>");
       }
       const safeDesc = ui.escapeHtml(srv.description || "-");
-
+      let diskDisplay =
+        srv.disks && srv.disks.length > 0
+          ? srv.disks
+              .map((d) => `<strong>${d.diskType} / ${d.size}GB</strong>`)
+              .join("<br>")
+          : '<span style="color:#999;">-</span>';
       return `
             <tr>
                 <td><input type="checkbox" class="data-checkbox srv-checkbox-item" data-id="${
@@ -183,6 +218,7 @@ function renderTable() {
         srv.serverType
       }</span></td>
                 <td>${srv.cpuCore} Core / ${srv.memoryGb} GB</td>
+                <td>${diskDisplay}</td>
                 <td>${ipDisplay}</td> <td>${hwInfo}</td>
                 <td>${srv.serverCategory}</td>
                 <td><div class="text-ellipsis" title="${safeDesc}">${safeDesc}</div></td>
@@ -200,6 +236,7 @@ function setupEventListeners() {
   btnEdit.addEventListener("click", handleEditAction);
   btnDelete.addEventListener("click", handleDeleteAction);
   btnAddIp.addEventListener("click", () => createIpRow()); // 🌟 IP 추가 버튼
+  btnAddDisk.addEventListener("click", () => createDiskRow()); // 🌟 디스크 추가 버튼
 
   ui.setupCheckAll("check-all", "srv-checkbox-item");
 
@@ -228,6 +265,8 @@ function openCreateModal() {
   inputDesc.value = "";
   ipListContainer.innerHTML = ""; // 초기화
   createIpRow(); // 기본 1개 칸은 띄워줌
+  diskListContainer.innerHTML = "";
+  createDiskRow("SSD", 100, "/"); // 기본 OS 영역용으로 1개 띄워줌
 
   hardwareMappingArea.style.display = "block";
   ui.openModal("srv-modal", "modal-title", "새 서버 등록");
@@ -253,6 +292,15 @@ function openEditModal(id) {
     );
   } else {
     createIpRow(); // 없으면 빈 칸 1개
+  }
+
+  diskListContainer.innerHTML = "";
+  if (target.disks && target.disks.length > 0) {
+    target.disks.forEach((d) =>
+      createDiskRow(d.diskType, d.size, d.mountPoint)
+    );
+  } else {
+    createDiskRow();
   }
 
   selHardware.value = target.hardwareId || "";
@@ -312,6 +360,20 @@ async function saveServer() {
   // 🌟 15년 차의 핵심: 유효성 검사 실패 시 백엔드 API를 호출하지 않고 함수 즉시 종료!
   if (hasIpError) return;
 
+  const disks = [];
+  document.querySelectorAll(".disk-row").forEach((row) => {
+    const dType = row.querySelector(".disk-type-sel").value;
+    const dCap = row.querySelector(".disk-cap-input").value;
+    const dMount = row.querySelector(".disk-mount-input").value.trim();
+    if (dType && dCap) {
+      disks.push({
+        diskType: dType,
+        size: parseInt(dCap),
+        mountPoint: dMount,
+      });
+    }
+  });
+
   // ==============================================================
   // 🌟 2. 기존 정상 저장 로직
   // ==============================================================
@@ -328,6 +390,7 @@ async function saveServer() {
     hardwareId: hwIdVal,
     description: inputDesc.value.trim(),
     ips: ips, // 🌟 검증을 무사히 통과한 N개의 IP 리스트 전송
+    disks: disks,
   };
 
   try {

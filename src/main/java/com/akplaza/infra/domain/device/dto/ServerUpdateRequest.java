@@ -45,4 +45,5 @@ public class ServerUpdateRequest {
     private Long hardwareId; // 하드웨어 교체 시 사용
 
     private List<IpAssignRequest> ips; // 할당할 IP 목록 (VIP, 관리 IP 등)
+    private List<DiskRequest> disks;
 }

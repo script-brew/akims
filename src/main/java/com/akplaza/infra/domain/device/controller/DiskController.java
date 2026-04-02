@@ -49,6 +49,14 @@ public class DiskController {
         return ResponseEntity.ok(response);
     }
 
+    @Operation(summary = "디스크 전체 조회", description = "시스템에 등록된 전체 디스크 목록을 조회합니다.")
+    @GetMapping
+    public ResponseEntity<List<DiskResponse>> getAllDisks() {
+        log.debug("Server API: 전체 목록 조회 요청");
+        List<DiskResponse> responses = diskService.getAllDisks();
+        return ResponseEntity.ok(responses);
+    }
+
     @Operation(summary = "특정 서버의 디스크 목록 조회", description = "서버 상세 화면에서 해당 서버에 장착된 모든 디스크 목록을 조회합니다.")
     @GetMapping("/server/{serverId}")
     public ResponseEntity<List<DiskResponse>> getDisksByServerId(@PathVariable Long serverId) {
@@ -57,7 +65,7 @@ public class DiskController {
         return ResponseEntity.ok(responses);
     }
 
-    @Operation(summary = "디스크 정보 수정", description = "특정 디스크의 용량이나 마운트 포인트를 변경합니다.")
+    @Operation(summary = "디스크 정보 수정", description = "특정 디스크의 용량이나 마운트 포인트를변경합니다.")
     @PutMapping("/{id}")
     public ResponseEntity<Void> updateDisk(
             @PathVariable Long id,

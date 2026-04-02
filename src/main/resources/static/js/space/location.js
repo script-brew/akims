@@ -157,7 +157,7 @@ function generateRackSlotsHTML(targetRack, rackHwList) {
       continue;
     }
 
-    const hw = rackHwList.find((h) => h.rackPosition === u);
+    const hw = rackHwList.find((h) => h.rackPosition + h.size - 1 === u);
 
     if (hw) {
       let typeClass = "hw-default";
@@ -171,22 +171,27 @@ function generateRackSlotsHTML(targetRack, rackHwList) {
       if (hw.equipmentType === "STORAGE" || hw.equipmentType === "NAS")
         typeClass = "hw-storage";
 
+      // 🌟 1. 도마(받침대)인 경우 전용 클래스 매핑
+      if (hw.model === "shelf") typeClass = "hw-shelf";
+
       // 🌟 전원 연결 화살표 로직 추가
       let leftArrow = "";
       let rightArrow = "";
-      if (hw.isSinglePower) {
-        // 단일 전원: 빨간색으로 깜빡이는 화살표
-        const alertStyle = "color:#e74c3c; animation: blink 1.5s infinite;";
-        if (hw.powerLine === "B") {
-          rightArrow = `<span style="${alertStyle}" title="B전원 단일 연결">▶</span>`;
+      if (hw.model !== "shelf") {
+        if (hw.isSinglePower) {
+          // 단일 전원: 빨간색으로 깜빡이는 화살표
+          const alertStyle = "color:#e74c3c; animation: blink 1.5s infinite;";
+          if (hw.powerLine === "B") {
+            rightArrow = `<span style="${alertStyle}" title="B전원 단일 연결">▶</span>`;
+          } else {
+            // 'A' 이거나 구버전 데이터(null)일 경우 기본 좌측
+            leftArrow = `<span style="${alertStyle}" title="A전원 단일 연결">◀</span>`;
+          }
         } else {
-          // 'A' 이거나 구버전 데이터(null)일 경우 기본 좌측
-          leftArrow = `<span style="${alertStyle}" title="A전원 단일 연결">◀</span>`;
+          // 이중 전원: 양쪽 모두 초록색 화살표로 안정감 부여
+          leftArrow = `<span style="color:#2ecc71;" title="A전원 연결됨">◀</span>`;
+          rightArrow = `<span style="color:#2ecc71;" title="B전원 연결됨">▶</span>`;
         }
-      } else {
-        // 이중 전원: 양쪽 모두 초록색 화살표로 안정감 부여
-        leftArrow = `<span style="color:#2ecc71;" title="A전원 연결됨">◀</span>`;
-        rightArrow = `<span style="color:#2ecc71;" title="B전원 연결됨">▶</span>`;
       }
 
       const hwName = ui.escapeHtml(hw.description || hw.equipmentType);
@@ -213,7 +218,7 @@ function generateRackSlotsHTML(targetRack, rackHwList) {
       skipUs = hw.size - 1;
     } else {
       slotsHTML += `
-                <div class="rack-slot empty" style="height: 29px;">
+                <div class="rack-slot empty" style="height: 29px;" onclick="window.addShelf(${targetRack.id}, ${u})" title="클릭하여 도마(받침대) 추가">
                     <div class="u-num-group"><div class="u-num">${u}U</div></div>
                     <div class="hw-item-wrapper empty-wrapper"></div>
                 </div>
@@ -405,4 +410,35 @@ window.viewHardwareDetail = (hwId) => {
         </div>
     `;
   ui.openModal("hw-detail-modal");
+};
+
+window.addShelf = async (rackId, u) => {
+  // 1. 확인 팝업
+  if (!confirm(`해당 Slot(${u}U)에 도마(받침대)를 추가하시겠습니까?`)) {
+    return;
+  }
+
+  // 2. 백엔드로 보낼 하드웨어(도마) 규격
+  const payload = {
+    equipmentType: "ETC",
+    model: "shelf",
+    serialNo: `SHELF-${rackId}-${u}`, // 겹치지 않게 임의의 시리얼 부여
+    size: 1,
+    isSinglePower: false,
+    powerLine: "DUAL", // 도마는 전원이 없으므로 기본값
+    rackId: rackId,
+    rackPosition: u,
+    description: "도마(받침대)",
+    introductionYear: new Date().getFullYear(),
+  };
+
+  try {
+    // 3. 하드웨어 생성 API 호출
+    await api.post("/api/v1/hardwares", payload);
+
+    // 4. 완료 후 데이터를 다시 불러와서 화면(랙 뷰) 부드럽게 갱신
+    loadAllData();
+  } catch (e) {
+    alert("도마(받침대) 추가 중 오류가 발생했습니다.");
+  }
 };

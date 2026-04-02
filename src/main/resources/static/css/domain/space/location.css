@@ -1,1 +1,204 @@
+/* 🌟 랙 시각화를 위한 Grid 레이아웃 */
+.rack-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 40px;
+}
 
+.rack-cabinet-wrapper {
+  text-align: center;
+}
+.rack-title {
+  font-weight: bold;
+  font-size: 1.1rem;
+  margin-bottom: 10px;
+  color: var(--primary-color);
+}
+
+.rack-cabinet {
+  background-color: #ffffff; /* 🌟 랙 내부를 흰색으로 변경 */
+  border: 12px solid #2c3e50; /* 외부 철제 프레임 */
+  border-radius: 4px;
+  padding: 5px 10px;
+  box-shadow: 10px 10px 20px rgba(0, 0, 0, 0.3),
+    inset 0 0 10px rgba(0, 0, 0, 0.05);
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+/* 🌟 랙 슬롯 기본 스타일 (검은색 -> 흰색 톤) */
+.rack-slot {
+  background-color: #ffffff;
+  border-bottom: 1px solid #bdc3c7; /* 슬롯 간 확실한 구분선 */
+  display: flex;
+  align-items: stretch; /* 내부 요소 높이 꽉 채움 */
+  box-sizing: border-box;
+  position: relative;
+  transition: background-color 0.2s;
+}
+
+/* 🌟 도마(받침대) 전용 검은색 스타일 */
+.hw-shelf {
+  background-color: #1a1a1a !important; /* 고급스러운 무광 검정 */
+  color: #7f8c8d !important; /* 글씨는 튀지 않게 회색 처리 */
+  border: 1px solid #000 !important;
+}
+
+/* 🌟 빈 슬롯 클릭 유도 (Hover 효과) */
+.rack-slot.empty {
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.rack-slot.empty:hover {
+  background-color: #eaf2f8; /* 마우스를 올리면 살짝 푸른빛이 돌면서 클릭 유도 */
+}
+
+.rack-slot.empty:hover .empty-wrapper::after {
+  content: "+ 도마(받침대) 추가";
+  color: #3498db;
+  font-size: 0.8rem;
+  font-weight: bold;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+}
+
+/* 🌟 양옆 나사선 레일 (U 번호 묶음 컨테이너) */
+.u-num-group {
+  width: 45px;
+  display: flex;
+  flex-direction: column;
+  border-right: 2px solid #bdc3c7; /* 레일과 장비 공간의 경계선 */
+  background-color: #f8f9fa; /* 레일 부분만 아주 연한 회색 */
+}
+
+/* 개별 U 번호 */
+.u-num {
+  flex: 1; /* 여러 U일 경우 높이를 균등하게 분할 */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: monospace;
+  font-weight: bold;
+  color: #7f8c8d;
+  font-size: 0.75rem;
+  border-bottom: 1px dashed #dcdde1; /* 장비 내부의 U 구분은 옅은 점선으로 */
+  box-sizing: border-box;
+}
+.u-num:last-child {
+  border-bottom: none; /* 마지막 U는 밑줄 제거 */
+}
+
+.hw-item {
+  flex: 1;
+  display: flex; /* 기존 grid에서 flex로 변경 */
+  align-items: center;
+  justify-content: center; /* 텍스트 중앙 정렬 */
+  padding: 0 15px;
+  height: 100%;
+  color: white;
+  font-weight: bold;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  cursor: pointer; /* 🌟 클릭 가능하도록 커서 변경 */
+  transition: transform 0.1s;
+}
+
+.hw-item:hover {
+  transform: scale(1.02); /* 마우스 오버 시 살짝 확대 효과 */
+  filter: brightness(1.1);
+}
+
+.hw-info.hw-name {
+  text-align: center;
+  font-size: 0.85rem;
+  width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 🌟 하드웨어 장비 래퍼 (흰색 배경과 장비 사이에 여백을 주기 위함) */
+.hw-item-wrapper {
+  flex: 1;
+  padding: 2px 5px; /* 위아래 2px, 양옆 5px 여백을 주어 랙에 예쁘게 꽂힌 느낌 부여 */
+  display: flex;
+  flex-direction: column;
+}
+.hw-item-wrapper.empty-wrapper {
+  padding: 0;
+}
+
+/* 텍스트 줄임표 */
+.hw-info {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.hw-name {
+  text-align: left;
+  font-size: 0.75rem;
+  color: #ecf0f1;
+}
+.hw-model {
+  text-align: center;
+  font-size: 0.85rem;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+}
+.hw-serial {
+  text-align: right;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.75rem;
+  color: #ecf0f1;
+  font-family: monospace;
+}
+
+/* 오른쪽: 시리얼 및 전원 경고 */
+.hw-serial {
+  text-align: right;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.75rem;
+  color: #bdc3c7; /* 시리얼은 약간 어두운 톤으로 */
+  font-family: monospace; /* 숫자/영문 구분이 쉬운 폰트 */
+}
+
+/* 장비 종류별 색상 그라데이션 */
+.hw-server {
+  background: linear-gradient(135deg, #2980b9, #3498db);
+}
+.hw-switch {
+  background: linear-gradient(135deg, #c0392b, #e74c3c);
+}
+.hw-storage {
+  background: linear-gradient(135deg, #d35400, #e67e22);
+}
+.hw-default {
+  background: linear-gradient(135deg, #7f8c8d, #95a5a6);
+}
+
+/* 단일 전원 경고 화살표 */
+.single-power-alert {
+  color: #ff4757;
+  font-size: 0.9rem;
+  animation: blink 1.5s infinite;
+}
+
+@keyframes blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}

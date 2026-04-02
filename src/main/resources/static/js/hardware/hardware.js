@@ -56,7 +56,8 @@ async function loadRacks() {
 
 async function loadHardwares() {
   try {
-    hardwareList = await api.get("/api/v1/hardwares");
+    const data = await api.get("/api/v1/hardwares");
+    hardwareList = data.filter((hw) => hw.model !== "shelf");
     renderTable();
   } catch (error) {
     tableBody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:red;">데이터 로드 실패</td></tr>`;
@@ -143,7 +144,11 @@ function setupEventListeners() {
 
   chkSinglePower.addEventListener("change", (e) => {
     groupPowerLine.style.display = e.target.checked ? "block" : "none";
-    if (!e.target.checked) selPowerLine.value = "";
+    if (!e.target.checked) {
+      selPowerLine.value = "";
+    } else {
+      selPowerLine.value = "A";
+    }
   });
 }
 
@@ -155,8 +160,8 @@ function openCreateModal() {
   inputYear.value = new Date().getFullYear();
   inputSize.value = 1;
   chkSinglePower.checked = false;
-  groupPowerLine.style.display = target.isSinglePower ? "block" : "none";
-  selPowerLine.value = target.selPowerLine;
+  groupPowerLine.style.display = "none";
+  selPowerLine.value = "";
   selRack.value = "";
   inputPosition.value = "";
   inputDesc.value = "";
@@ -167,8 +172,20 @@ function openCreateModal() {
 async function saveHardware() {
   // 빈 문자열인 경우 null 처리 (백엔드 Long 타입 매핑 에러 방지)
   const rackIdVal = selRack.value === "" ? null : parseInt(selRack.value);
-  const positionVal =
-    inputPosition.value === "" ? null : parseInt(inputPosition.value);
+  // 🚨 프론트엔드 방어 로직: 랙을 선택하지 않았다면 rackPosition은 무조건 null로 세팅
+  let rackPosVal = null;
+  if (rackIdVal !== null) {
+    rackPosVal =
+      inputPosition.value === "" ? null : parseInt(inputPosition.value);
+
+    // 추가 검증: 랙을 골랐는데 위치를 안 적은 경우 알림
+    if (rackPosVal === null || isNaN(rackPosVal)) {
+      alert(
+        "랙(Rack)을 선택하신 경우, 실장될 위치(U)를 반드시 입력해야 합니다."
+      );
+      return; // API 호출 중단
+    }
+  }
 
   const requestData = {
     equipmentType: selType.value,
@@ -179,7 +196,7 @@ async function saveHardware() {
     isSinglePower: chkSinglePower.checked,
     powerLine: chkSinglePower.checked ? selPowerLine.value : "DUAL",
     rackId: rackIdVal,
-    rackPosition: positionVal,
+    rackPosition: rackPosVal,
     description: inputDesc.value.trim(),
   };
 
@@ -212,7 +229,7 @@ function openEditModal(id) {
   inputSize.value = target.size;
   chkSinglePower.checked = target.isSinglePower;
   groupPowerLine.style.display = target.isSinglePower ? "block" : "none";
-  selPowerLine.value = target.selPowerLine;
+  selPowerLine.value = target.powerLine;
   selRack.value = target.rackId || "";
   inputPosition.value = target.rackPosition || "";
   inputDesc.value = target.description || "";

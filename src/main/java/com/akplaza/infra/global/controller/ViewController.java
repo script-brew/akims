@@ -57,4 +57,10 @@ public class ViewController {
     public String ips() {
         return "network/ip";
     }
+
+    // 🌟 추가: IP 관리 화면 라우팅
+    @GetMapping("/view/disks")
+    public String disks() {
+        return "device/disk";
+    }
 }

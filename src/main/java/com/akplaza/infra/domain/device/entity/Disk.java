@@ -38,7 +38,7 @@ public class Disk extends BaseTimeEntity {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20, columnDefinition = "VARCHAR(50)")
-    private DiskType type; // 디스크 타입
+    private DiskType diskType; // 디스크 타입
 
     @Column(nullable = false)
     private Integer size; // 단위: GB
@@ -47,14 +47,15 @@ public class Disk extends BaseTimeEntity {
     private String mountPoint; // 예: "C:\", "/", "/data"
 
     @Builder
-    public Disk(DiskType type, Integer size, String mountPoint) {
-        this.type = type;
+    public Disk(Server server, DiskType diskType, Integer size, String mountPoint) {
+        this.server = server;
+        this.diskType = diskType;
         this.size = size;
         this.mountPoint = mountPoint;
     }
 
-    public void updateDiskInfo(DiskType type, Integer size, String mountPoint) {
-        this.type = type;
+    public void updateDiskInfo(DiskType diskType, Integer size, String mountPoint) {
+        this.diskType = diskType;
         this.size = size;
         this.mountPoint = mountPoint;
     }

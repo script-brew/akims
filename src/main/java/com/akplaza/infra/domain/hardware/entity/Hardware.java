@@ -37,7 +37,7 @@ public class Hardware extends BaseTimeEntity {
     private Rack rack;
 
     // --- 랙실장도 (Rack Diagram) 표현을 위한 위치 정보 ---
-    @Column(nullable = false)
+    @Column(name = "rack_position")
     private Integer rackPosition; // 실장 위치 (예: 아래에서부터 15번 U에 장착)
 
     @Column(nullable = false)

@@ -73,17 +73,19 @@ public class HardwareService {
         }
 
         Rack rack = null;
+        Integer finalRackPosition = null;
         if (dto.getRackId() != null) {
             rack = rackRepository.findById(dto.getRackId())
                     .orElseThrow(() -> new ResourceNotFoundException("지정된 랙을 찾을 수 없습니다."));
 
             // 🌟 등록 전 공간 검증 수행 (새로 생성하므로 currentHardwareId는 null)
             validateRackSpace(rack, dto.getRackPosition(), dto.getSize(), null);
+            finalRackPosition = dto.getRackPosition(); // 랙이 있을 때만 높이 인정
         }
 
         Hardware hardware = Hardware.builder()
                 .rack(rack)
-                .rackPosition(dto.getRackPosition())
+                .rackPosition(finalRackPosition)
                 .size(dto.getSize())
                 .equipmentType(dto.getEquipmentType())
                 .introductionYear(dto.getIntroductionYear())
@@ -136,19 +138,21 @@ public class HardwareService {
         }
 
         Rack newRack = null;
+        Integer finalRackPosition = null;
         if (dto.getRackId() != null) {
             newRack = rackRepository.findById(dto.getRackId())
                     .orElseThrow(() -> new ResourceNotFoundException("지정된 랙을 찾을 수 없습니다."));
 
             // 🌟 수정 전 공간 검증 수행 (자기 자신의 ID는 충돌 검사에서 제외)
             validateRackSpace(newRack, dto.getRackPosition(), dto.getSize(), id);
+            finalRackPosition = dto.getRackPosition(); // 랙이 있을 때만 높이 인정
         }
 
         // 💡 엔티티 상태 변경 (더티 체킹) - 빌더 패턴 외에 엔티티 내부 Update 메서드 활용 권장
         // 하드웨어 교체나 데이터센터 이전 시 Rack 정보가 변경될 수 있음
         hardware.updateHardwareInfo(dto.getModel(), dto.getSerialNo(), dto.getEquipmentType(),
                 dto.getIntroductionYear(), dto.getSize(), dto.getDescription(),
-                newRack, dto.getRackPosition(), dto.getIsSinglePower(), dto.getPowerLine());
+                newRack, finalRackPosition, dto.getIsSinglePower(), dto.getPowerLine());
 
         log.info("하드웨어 수정 트랜잭션 완료 - ID: {}", id);
     }

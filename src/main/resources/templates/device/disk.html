@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+  <head>
+    <meta charset="UTF-8" />
+    <title>AKIMS - 디스크 자산 관리</title>
+    <link rel="stylesheet" th:href="@{/css/common.css}" />
+    <link rel="stylesheet" th:href="@{/css/layout.css}" />
+    <link rel="stylesheet" th:href="@{/css/components.css}" />
+  </head>
+  <body>
+    <header th:replace="~{layout/header :: headerFragment}"></header>
+    <div class="app-body">
+      <aside th:replace="~{layout/sidebar :: sidebarFragment}"></aside>
+      <main class="app-main">
+        <div class="content-header">
+          <h2>디스크(Storage) 전체 관리</h2>
+          <div class="header-actions">
+            <button id="btn-open-modal" class="btn">디스크 추가</button>
+            <button id="btn-edit" class="btn" style="background-color: #f39c12">
+              선택 수정
+            </button>
+            <button id="btn-delete" class="btn danger">선택 삭제</button>
+          </div>
+        </div>
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th width="5%"><input type="checkbox" id="check-all" /></th>
+              <th width="20%">소속 서버 (Host)</th>
+              <th width="15%">타입</th>
+              <th width="20%">용량 (GB)</th>
+              <th width="20%">마운트 경로</th>
+            </tr>
+          </thead>
+          <tbody id="disk-table-body"></tbody>
+        </table>
+      </main>
+    </div>
+    <footer th:replace="~{layout/footer :: footerFragment}"></footer>
+
+    <div id="disk-modal" class="modal-overlay">
+      <div class="modal-content" style="width: 450px">
+        <h3 id="modal-title">디스크 정보 등록</h3>
+        <input type="hidden" id="disk-id" />
+
+        <div class="form-group full" id="server-select-group">
+          <label for="disk-server-id">대상 서버 *</label>
+          <select id="disk-server-id">
+            <option value="">-- 서버 선택 --</option>
+          </select>
+          <small style="color: #7f8c8d"
+            >※ 디스크가 장착될 서버를 선택하세요.</small
+          >
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="disk-type">디스크 타입 *</label>
+            <select id="disk-type">
+              <option value="SSD">SSD</option>
+              <option value="HDD">HDD</option>
+              <option value="NVME">NVMe</option>
+              <option value="SAN">SAN 스토리지</option>
+              <option value="NAS">NAS 마운트</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="disk-capacity">용량 (GB) *</label>
+            <input type="number" id="disk-capacity" value="100" min="1" />
+          </div>
+        </div>
+
+        <div class="form-group full">
+          <label for="disk-mount">마운트 경로 (Mount Point) *</label>
+          <input
+            type="text"
+            id="disk-mount"
+            placeholder="예: /, /data, C:\, D:\"
+          />
+        </div>
+
+        <div class="modal-actions">
+          <button id="btn-cancel" class="btn cancel">취소</button>
+          <button id="btn-save" class="btn">저장</button>
+        </div>
+      </div>
+    </div>
+
+    <script type="module" th:src="@{/js/device/disk.js}"></script>
+  </body>
+</html>

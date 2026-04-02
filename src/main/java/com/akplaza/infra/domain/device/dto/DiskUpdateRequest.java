@@ -14,7 +14,7 @@ import lombok.NoArgsConstructor;
 public class DiskUpdateRequest {
 
     @NotNull(message = "디스크 타입을 선택해주세요.")
-    private DiskType type;
+    private DiskType diskType;
 
     @NotNull(message = "디스크 용량을 입력해주세요.")
     @Min(value = 1, message = "디스크 용량은 1GB 이상이어야 합니다.")

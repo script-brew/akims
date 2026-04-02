@@ -53,4 +53,5 @@ public class ServerCreateRequest {
     private Long hardwareId; // 물리 서버일 경우 매핑할 하드웨어 ID
 
     private List<IpAssignRequest> ips; // 할당할 IP 목록
+    private List<DiskRequest> disks;
 }

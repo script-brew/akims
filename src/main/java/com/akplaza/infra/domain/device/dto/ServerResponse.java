@@ -1,8 +1,11 @@
 package com.akplaza.infra.domain.device.dto;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 import com.akplaza.infra.domain.device.entity.Server;
+import com.akplaza.infra.domain.network.dto.IpAssignRequest;
+import com.akplaza.infra.domain.network.entity.Ip;
 
 import lombok.Getter;
 
@@ -26,10 +29,10 @@ public class ServerResponse {
     private String rackNo; // 랙 번호
 
     // IP 목록 (IpService 등을 통해 주입)
-    private List<String> ipAddresses;
+    private List<IpAssignRequest> ips;
 
     // 엔티티를 DTO로 변환하는 생성자
-    public ServerResponse(Server server, List<String> ipAddresses) {
+    public ServerResponse(Server server, List<Ip> assignedIps) {
         this.id = server.getId();
         this.hostName = server.getHostName();
         this.serverCategory = server.getServerCategory().name();
@@ -50,6 +53,12 @@ public class ServerResponse {
                 this.locationName = server.getHardware().getRack().getLocation().getName();
             }
         }
-        this.ipAddresses = ipAddresses;
+
+        // 🌟 여러 개의 Ip 엔티티를 DTO 리스트로 변환
+        if (assignedIps != null) {
+            this.ips = assignedIps.stream()
+                    .map(ip -> new IpAssignRequest(ip.getIpCidr().getId(), ip.getIpAddress()))
+                    .collect(Collectors.toList());
+        }
     }
 }

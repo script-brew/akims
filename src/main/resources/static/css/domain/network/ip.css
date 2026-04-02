@@ -27,7 +27,7 @@
 /* 🌟 16x16 = 256개의 그리드 레이아웃 */
 .ip-grid {
   display: grid;
-  grid-template-columns: repeat(256, 1fr);
+  grid-template-columns: repeat(32, 1fr);
   gap: 4px; /* 네모칸 사이의 간격 */
 }
 

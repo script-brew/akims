@@ -1,7 +1,10 @@
 package com.akplaza.infra.domain.device.dto;
 
+import java.util.List;
+
 import com.akplaza.infra.domain.device.entity.Environment;
 import com.akplaza.infra.domain.device.entity.ServerCategory;
+import com.akplaza.infra.domain.network.dto.IpAssignRequest;
 
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
@@ -41,6 +44,5 @@ public class ServerUpdateRequest {
 
     private Long hardwareId; // 하드웨어 교체 시 사용
 
-    private Long ipCidrId; // 할당된 IP 대역
-    private String ipAddress;
+    private List<IpAssignRequest> ips; // 할당할 IP 목록 (VIP, 관리 IP 등)
 }

@@ -6,6 +6,7 @@ import java.util.List;
 import com.akplaza.infra.domain.device.entity.Environment;
 import com.akplaza.infra.domain.device.entity.ServerCategory;
 import com.akplaza.infra.domain.device.entity.ServerType;
+import com.akplaza.infra.domain.network.dto.IpAssignRequest;
 
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
@@ -51,7 +52,5 @@ public class ServerCreateRequest {
 
     private Long hardwareId; // 물리 서버일 경우 매핑할 하드웨어 ID
 
-    private Long ipCidrId; // 할당된 IP 대역
-    private String ipAddress;
-    private List<String> ipAddresses = new ArrayList<>(); // 할당할 IP 목록
+    private List<IpAssignRequest> ips; // 할당할 IP 목록
 }

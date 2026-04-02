@@ -2,16 +2,22 @@
 package com.akplaza.infra.domain.network.dto;
 
 import com.akplaza.infra.domain.network.entity.Ip;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 import lombok.Getter;
+import lombok.Setter;
 
 @Getter
+@Setter
 public class IpResponse {
     private Long id;
     private String ipAddress;
+
+    @JsonProperty("isUsed")
     private boolean isUsed;
     private String assignedType;
     private Long assignedId;
+    private String assignedTargetName;
 
     // 조인된 CIDR 정보
     private Long ipCidrId;

@@ -1,7 +1,10 @@
 // 1-2. NetworkDeviceUpdateRequest.java (수정 요청 DTO)
 package com.akplaza.infra.domain.device.dto;
 
+import java.util.List;
+
 import com.akplaza.infra.domain.device.entity.NetworkDeviceCategory;
+import com.akplaza.infra.domain.network.dto.IpAssignRequest;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -26,7 +29,6 @@ public class NetworkDeviceUpdateRequest {
     private String monitoringInfo;
     private Long hardwareId;
 
-    private Long ipCidrId;
-    private String ipAddress;
+    private List<IpAssignRequest> ips; // 할당할 IP 목록 (VIP, 관리 IP 등)
 
 }

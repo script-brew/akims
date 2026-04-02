@@ -19,6 +19,7 @@ const inputIpAddress = document.getElementById("srv-ip-address");
 const selHardware = document.getElementById("srv-hardware");
 const inputDesc = document.getElementById("srv-desc");
 const hardwareMappingArea = document.getElementById("hardware-mapping-area");
+const ipListContainer = document.getElementById("ip-list-container");
 
 // Buttons
 const btnOpenModal = document.getElementById("btn-open-modal");
@@ -26,6 +27,7 @@ const btnEdit = document.getElementById("btn-edit");
 const btnDelete = document.getElementById("btn-delete");
 const btnCancel = document.getElementById("btn-cancel");
 const btnSave = document.getElementById("btn-save");
+const btnAddIp = document.getElementById("btn-add-ip");
 
 // --- State ---
 let serverList = [];
@@ -107,6 +109,36 @@ function getTypeBadge(type) {
   return "";
 }
 
+// 🌟 동적으로 IP 입력 행(Row)을 생성하는 함수
+function createIpRow(cidrId = "", ip = "") {
+  const row = document.createElement("div");
+  row.className = "ip-row form-row";
+  row.style.marginBottom = "0";
+
+  const options = cidrList
+    .map(
+      (cidr) =>
+        `<option value="${cidr.id}" ${cidr.id == cidrId ? "selected" : ""}>${
+          cidr.cidrBlock
+        } (${cidr.description || "이름 없음"})</option>`
+    )
+    .join("");
+
+  row.innerHTML = `
+        <select class="ip-cidr-sel" style="flex:1;">
+            <option value="">-- 대역 선택 --</option>
+            ${options}
+        </select>
+        <input type="text" class="ip-address-input" placeholder="예: 10.10.10.15" value="${ip}" style="flex:1;">
+        <button type="button" class="btn small danger btn-remove-ip">X</button>
+    `;
+
+  row
+    .querySelector(".btn-remove-ip")
+    .addEventListener("click", () => row.remove());
+  ipListContainer.appendChild(row);
+}
+
 function renderTable() {
   if (serverList.length === 0) {
     tableBody.innerHTML = `<tr><td colspan="8" style="text-align:center;">등록된 서버가 없습니다.</td></tr>`;
@@ -125,14 +157,14 @@ function renderTable() {
           })()
         : '<span style="color:#999;">- (클라우드/미할당) -</span>';
 
-      // (백엔드 ServerResponse가 assignedIps 리스트를 반환한다고 가정)
       let ipDisplay = '<span style="color:#999;">미할당</span>';
-      if (srv.ipAddresses && srv.ipAddresses.length > 0) {
-        ipDisplay = `<strong>${srv.ipAddresses[0]}</strong>`;
-      } else if (srv.ipAddress) {
-        // 혹시 단일 필드로 넘길 경우 대비
-        ipDisplay = `<strong>${srv.ipAddresses[0]}</strong>`;
+      if (srv.ips && srv.ips.length > 0) {
+        // N개의 IP를 줄바꿈(<br>)으로 표시
+        ipDisplay = srv.ips
+          .map((ipData) => `<strong>${ipData.ipAddress}</strong>`)
+          .join("<br>");
       }
+      const safeDesc = ui.escapeHtml(srv.description || "-");
 
       return `
             <tr>
@@ -153,6 +185,7 @@ function renderTable() {
                 <td>${srv.cpuCore} Core / ${srv.memoryGb} GB</td>
                 <td>${ipDisplay}</td> <td>${hwInfo}</td>
                 <td>${srv.serverCategory}</td>
+                <td><div class="text-ellipsis" title="${safeDesc}">${safeDesc}</div></td>
             </tr>
         `;
     })
@@ -166,6 +199,7 @@ function setupEventListeners() {
   btnSave.addEventListener("click", saveServer);
   btnEdit.addEventListener("click", handleEditAction);
   btnDelete.addEventListener("click", handleDeleteAction);
+  btnAddIp.addEventListener("click", () => createIpRow()); // 🌟 IP 추가 버튼
 
   ui.setupCheckAll("check-all", "srv-checkbox-item");
 
@@ -190,10 +224,10 @@ function openCreateModal() {
   inputOs.value = "";
   inputCpu.value = 4;
   inputRam.value = 8;
-  selIpCidr.value = ""; // 🌟 초기값
-  inputIpAddress.value = ""; // 🌟 초기값
   selHardware.value = "";
   inputDesc.value = "";
+  ipListContainer.innerHTML = ""; // 초기화
+  createIpRow(); // 기본 1개 칸은 띄워줌
 
   hardwareMappingArea.style.display = "block";
   ui.openModal("srv-modal", "modal-title", "새 서버 등록");
@@ -211,13 +245,15 @@ function openEditModal(id) {
   inputOs.value = target.os;
   inputCpu.value = target.cpuCore || target.spec?.cpuCore || 4;
   inputRam.value = target.memoryGb || target.spec?.memoryGb || 8;
-  selIpCidr.value = target.ipCidrId || "";
 
-  // 할당된 IP를 인풋 박스에 세팅
-  inputIpAddress.value =
-    target.assignedIps && target.assignedIps.length > 0
-      ? target.assignedIps[0]
-      : target.ipAddress || "";
+  ipListContainer.innerHTML = "";
+  if (target.ips && target.ips.length > 0) {
+    target.ips.forEach((ipData) =>
+      createIpRow(ipData.ipCidrId, ipData.ipAddress)
+    );
+  } else {
+    createIpRow(); // 없으면 빈 칸 1개
+  }
 
   selHardware.value = target.hardwareId || "";
   inputDesc.value = target.description || "";
@@ -241,21 +277,57 @@ function closeModal() {
 }
 
 async function saveServer() {
+  // 🌟 1. 다중 IP 데이터 수집 및 방어 로직(Validation)
+  const ips = [];
+  let hasIpError = false;
+
+  // 화면에 동적으로 생성된 모든 IP 입력 줄(.ip-row)을 검사합니다.
+  const ipRows = document.querySelectorAll(".ip-row");
+
+  for (const row of ipRows) {
+    const cidrId = row.querySelector(".ip-cidr-sel").value;
+    const ipAddr = row.querySelector(".ip-address-input").value.trim();
+
+    // 케이스 A: 둘 다 비어있으면 (IP 할당 안 함) -> 통과 (무시)
+    if (!cidrId && !ipAddr) continue;
+
+    // 🚨 케이스 B (방어 로직): IP 주소는 썼는데 대역(CIDR)을 안 고른 경우
+    if (!cidrId && ipAddr) {
+      alert(`입력하신 IP(${ipAddr})의 대역(CIDR)을 선택해주세요.`);
+      hasIpError = true;
+      break; // 루프 중단
+    }
+
+    // 🚨 케이스 C (방어 로직): 대역은 골랐는데 IP 주소를 안 쓴 경우
+    if (cidrId && !ipAddr) {
+      alert("선택하신 대역에 할당할 IP 주소를 입력해주세요.");
+      hasIpError = true;
+      break; // 루프 중단
+    }
+
+    // 케이스 D: 둘 다 정상적으로 입력됨 -> 전송할 배열에 추가
+    ips.push({ ipCidrId: parseInt(cidrId), ipAddress: ipAddr });
+  }
+
+  // 🌟 15년 차의 핵심: 유효성 검사 실패 시 백엔드 API를 호출하지 않고 함수 즉시 종료!
+  if (hasIpError) return;
+
+  // ==============================================================
+  // 🌟 2. 기존 정상 저장 로직
+  // ==============================================================
   const hwIdVal = selHardware.value === "" ? null : parseInt(selHardware.value);
-  const cidrIdVal = selIpCidr.value === "" ? null : parseInt(selIpCidr.value); // 🌟 파싱
 
   const requestData = {
     hostName: inputHostName.value.trim(),
-    environment: selEnvironment.value, // 🌟 전송
+    environment: selEnvironment.value,
     serverCategory: selCategory.value,
     serverType: selType.value,
     os: inputOs.value.trim(),
     cpuCore: parseInt(inputCpu.value),
     memoryGb: parseInt(inputRam.value),
-    ipCidrId: cidrIdVal, // 🌟 전송
-    ipAddress: inputIpAddress.value.trim(), // 🌟 전송
     hardwareId: hwIdVal,
     description: inputDesc.value.trim(),
+    ips: ips, // 🌟 검증을 무사히 통과한 N개의 IP 리스트 전송
   };
 
   try {
@@ -270,7 +342,7 @@ async function saveServer() {
     loadServers();
     ui.clearCheckAll("check-all");
   } catch (error) {
-    // api.js가 에러 처리
+    // api.js가 백엔드 에러(예: 범위 불일치, 중복 등)를 처리하여 띄워줌
   }
 }
 

@@ -95,27 +95,31 @@ window.viewIpMap = async (cidrId, cidrBlock) => {
     let gridHTML = "";
     for (let i = 0; i <= 255; i++) {
       const currentIp = `${prefix}${i}`;
-
-      // 현재 IP가 백엔드에서 받은 사용 중인 IP 목록에 있는지 찾기
       const assignedInfo = usedIps.find((ip) => ip.ipAddress === currentIp);
 
       let boxClass = "ip-box";
-      let tooltipText = currentIp; // 기본 툴팁은 IP 주소만
+      let tooltipText = currentIp;
 
-      if (assignedInfo && assignedInfo.isUsed) {
-        // 사용 중인 IP면 용도에 따라 색상 클래스 부여
+      // 🌟 수정됨: assignedInfo가 존재하고, isUsed가 true일 때 색칠!
+      // (Jackson 설정에 따라 used 로 넘어올 수도 있으므로 이중 방어)
+      const isIpUsed =
+        assignedInfo && (assignedInfo.isUsed || assignedInfo.used);
+
+      if (isIpUsed) {
+        // 백엔드에서 주입해준 실제 장비명 (없으면 알 수 없음 처리)
+        const targetName = assignedInfo.assignedTargetName || "알 수 없음";
+
         if (assignedInfo.assignedType === "SERVER") {
           boxClass += " ip-used-server";
-          tooltipText = `[서버] ${assignedInfo.assignedTargetName} \n(${currentIp})`;
+          tooltipText = `[서버] ${targetName} \n(${currentIp})`;
         } else if (assignedInfo.assignedType === "NETWORK_DEVICE") {
           boxClass += " ip-used-network";
-          tooltipText = `[네트워크] ${assignedInfo.assignedTargetName} \n(${currentIp})`;
+          tooltipText = `[네트워크] ${targetName} \n(${currentIp})`;
         } else {
           boxClass += " ip-gateway";
           tooltipText = `[예약됨/기타] \n(${currentIp})`;
         }
       } else if (i === 0 || i === 255) {
-        // 네트워크 식별자(0) 및 브로드캐스트(255) 예약 처리
         boxClass += " ip-gateway";
         tooltipText =
           i === 0
@@ -123,7 +127,6 @@ window.viewIpMap = async (cidrId, cidrBlock) => {
             : `브로드캐스트 예약 (${currentIp})`;
       }
 
-      // HTML 생성 (툴팁 데이터 바인딩)
       gridHTML += `<div class="${boxClass}" data-tooltip="${tooltipText}">${i}</div>`;
     }
 

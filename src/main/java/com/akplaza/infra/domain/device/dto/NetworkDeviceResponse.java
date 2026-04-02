@@ -2,8 +2,11 @@
 package com.akplaza.infra.domain.device.dto;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 import com.akplaza.infra.domain.device.entity.NetworkDevice;
+import com.akplaza.infra.domain.network.dto.IpAssignRequest;
+import com.akplaza.infra.domain.network.entity.Ip;
 
 import lombok.Getter;
 
@@ -24,9 +27,9 @@ public class NetworkDeviceResponse {
     private String rackNo;
 
     // 할당된 IP 목록
-    private List<String> ipAddresses;
+    private List<IpAssignRequest> ips;
 
-    public NetworkDeviceResponse(NetworkDevice device, List<String> ipAddresses) {
+    public NetworkDeviceResponse(NetworkDevice device, List<Ip> assignedIps) {
         this.id = device.getId();
         this.name = device.getName();
         this.category = device.getCategory().name();
@@ -44,6 +47,11 @@ public class NetworkDeviceResponse {
                 this.locationName = device.getHardware().getRack().getLocation().getName();
             }
         }
-        this.ipAddresses = ipAddresses;
+        // 🌟 여러 개의 Ip 엔티티를 DTO 리스트로 변환
+        if (assignedIps != null) {
+            this.ips = assignedIps.stream()
+                    .map(ip -> new IpAssignRequest(ip.getIpCidr().getId(), ip.getIpAddress()))
+                    .collect(Collectors.toList());
+        }
     }
 }

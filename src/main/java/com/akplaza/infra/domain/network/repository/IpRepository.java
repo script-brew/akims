@@ -17,6 +17,8 @@ public interface IpRepository extends JpaRepository<Ip, Long> {
     // 예: findByAssignedTypeAndAssignedId(AssignedType.SERVER, 1L)
     List<Ip> findByAssignedTypeAndAssignedId(AssignedType assignedType, Long assignedId);
 
+    List<Ip> findByAssignedTypeAndAssignedIdIn(AssignedType assignedType, List<Long> assignedId);
+
     // 특정 CIDR 대역(예: DMZ 대역)에 속한 모든 IP 목록 조회
     List<Ip> findByIpCidrId(Long ipCidrId);
 

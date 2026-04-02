@@ -13,6 +13,7 @@ import com.akplaza.infra.domain.device.entity.NetworkDevice;
 import com.akplaza.infra.domain.device.repository.NetworkDeviceRepository;
 import com.akplaza.infra.domain.hardware.entity.Hardware;
 import com.akplaza.infra.domain.hardware.repository.HardwareRepository;
+import com.akplaza.infra.domain.network.dto.IpAssignRequest;
 import com.akplaza.infra.domain.network.entity.AssignedType;
 import com.akplaza.infra.domain.network.entity.Ip;
 import com.akplaza.infra.domain.network.repository.IpRepository;
@@ -48,7 +49,7 @@ public class NetworkDeviceService {
         }
 
         // [Exception Point 2] 하드웨어 검증
-        Hardware hardware = getHardwareIfPresent(dto.getHardwareId());
+        Hardware hardware = validateAndGetHardware(dto.getHardwareId());
 
         NetworkDevice device = NetworkDevice.builder()
                 .hardware(hardware)
@@ -63,10 +64,12 @@ public class NetworkDeviceService {
         NetworkDevice savedDevice = networkDeviceRepository.save(device);
         log.debug("네트워크 장비 기본 정보 저장 완료 - ID: {}", savedDevice.getId());
 
-        // 🌟 추가된 부분: IP 정보가 변경되었을 수 있으므로, 기존 IP 해제 후 새 IP 재할당
-        if (dto.getIpAddress() != null && !dto.getIpAddress().isBlank()) {
-            ipService.allocateIp(dto.getIpCidrId(), dto.getIpAddress(), AssignedType.NETWORK_DEVICE,
-                    savedDevice.getId());
+        // 🌟 N개의 IP 할당 루프
+        if (dto.getIps() != null && !dto.getIps().isEmpty()) {
+            for (IpAssignRequest ipReq : dto.getIps()) {
+                ipService.allocateIp(ipReq.getIpCidrId(), ipReq.getIpAddress(), AssignedType.NETWORK_DEVICE,
+                        savedDevice.getId());
+            }
         }
 
         log.info("네트워크 장비 등록 트랜잭션 완료 - ID: {}", savedDevice.getId());
@@ -82,18 +85,28 @@ public class NetworkDeviceService {
         NetworkDevice device = networkDeviceRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("장비를 찾을 수 없습니다. ID: " + id));
 
-        List<String> assignedIps = getAssignedIpAddresses(id);
-        return new NetworkDeviceResponse(device, assignedIps);
+        List<Ip> assignedIp = ipRepository.findByAssignedTypeAndAssignedId(AssignedType.NETWORK_DEVICE, device.getId());
+        return new NetworkDeviceResponse(device, assignedIp);
     }
 
     public List<NetworkDeviceResponse> getAllNetworkDevices() {
         log.debug("전체 네트워크 장비 목록 조회 요청");
-        // FETCH JOIN으로 N+1 문제 해결 (Repository에 구현된 쿼리 사용)
         List<NetworkDevice> devices = networkDeviceRepository.findAllWithHardwareAndRack();
 
+        // 🌟 15년 차의 최적화: N+1 문제 해결을 위해 IN 쿼리 단 1번으로 모든 할당 IP 조회
+        List<Long> deviceIds = devices.stream().map(NetworkDevice::getId).collect(Collectors.toList());
+
+        // (IpRepository에 List<Ip> findByAssignedTypeAndAssignedIdIn(...) 메서드 추가 필요)
+        List<Ip> allIps = ipRepository.findByAssignedTypeAndAssignedIdIn(AssignedType.NETWORK_DEVICE, deviceIds);
+
+        // 메모리에서 DeviceId를 Key로 하는 Map 생성 (O(1) 매핑)
+        java.util.Map<Long, List<Ip>> ipMap = allIps.stream()
+                .collect(Collectors.groupingBy(Ip::getAssignedId));
+
         return devices.stream().map(device -> {
-            List<String> assignedIps = getAssignedIpAddresses(device.getId());
-            return new NetworkDeviceResponse(device, assignedIps);
+            List<Ip> mappedIps = ipMap.getOrDefault(device.getId(), java.util.Collections.emptyList());
+            // DTO에 엔티티와 할당된 Ip 객체 자체를 넘겨서 DTO 내부에서 ipAddress와 ipCidrId를 추출하게 함
+            return new NetworkDeviceResponse(device, mappedIps);
         }).collect(Collectors.toList());
     }
 
@@ -113,13 +126,17 @@ public class NetworkDeviceService {
             throw new DuplicateResourceException("이미 존재하는 네트워크 장비명입니다: " + dto.getName());
         }
 
-        Hardware newHardware = getHardwareIfPresent(dto.getHardwareId());
+        Hardware newHardware = validateAndGetHardware(dto.getHardwareId());
 
         // 🌟 추가된 부분: IP 정보가 변경되었을 수 있으므로, 기존 IP 해제 후 새 IP 재할당
         ipService.releaseIpForTarget(AssignedType.NETWORK_DEVICE, device.getId());
 
-        if (dto.getIpAddress() != null && !dto.getIpAddress().isBlank()) {
-            ipService.allocateIp(dto.getIpCidrId(), dto.getIpAddress(), AssignedType.NETWORK_DEVICE, device.getId());
+        // 🌟 N개의 IP 할당 루프
+        if (dto.getIps() != null && !dto.getIps().isEmpty()) {
+            for (IpAssignRequest ipReq : dto.getIps()) {
+                ipService.allocateIp(ipReq.getIpCidrId(), ipReq.getIpAddress(), AssignedType.NETWORK_DEVICE,
+                        device.getId());
+            }
         }
 
         device.updateDeviceInfo(
@@ -155,7 +172,7 @@ public class NetworkDeviceService {
     // ==========================================
     // 내부 헬퍼 메서드
     // ==========================================
-    private Hardware getHardwareIfPresent(Long hardwareId) {
+    private Hardware validateAndGetHardware(Long hardwareId) {
         if (hardwareId == null)
             return null; // 가상 네트워크 어플라이언스(vFW 등) 허용
 

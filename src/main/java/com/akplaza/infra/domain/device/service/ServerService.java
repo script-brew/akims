@@ -15,6 +15,7 @@ import com.akplaza.infra.domain.device.entity.ServerType;
 import com.akplaza.infra.domain.device.repository.ServerRepository;
 import com.akplaza.infra.domain.hardware.entity.Hardware;
 import com.akplaza.infra.domain.hardware.repository.HardwareRepository;
+import com.akplaza.infra.domain.network.dto.IpAssignRequest;
 import com.akplaza.infra.domain.network.entity.AssignedType;
 import com.akplaza.infra.domain.network.entity.Ip;
 import com.akplaza.infra.domain.network.repository.IpRepository;
@@ -71,9 +72,12 @@ public class ServerService {
         Server savedServer = serverRepository.save(server);
         log.debug("서버 기본 정보 저장 완료 - ID: {}", savedServer.getId());
 
-        // 🌟 수정된 부분: 프론트엔드의 데이터 구조에 맞게 단일 IP 할당 (CIDR 검증 포함)
-        if (dto.getIpAddress() != null && !dto.getIpAddress().isBlank()) {
-            ipService.allocateIp(dto.getIpCidrId(), dto.getIpAddress(), AssignedType.SERVER, savedServer.getId());
+        // 🌟 N개의 IP 할당 루프
+        if (dto.getIps() != null && !dto.getIps().isEmpty()) {
+            for (IpAssignRequest ipReq : dto.getIps()) {
+                ipService.allocateIp(ipReq.getIpCidrId(), ipReq.getIpAddress(), AssignedType.SERVER,
+                        savedServer.getId());
+            }
         }
 
         log.info("서버 등록 트랜잭션 성공적으로 완료 - 최종 ID: {}", savedServer.getId());
@@ -90,7 +94,7 @@ public class ServerService {
                 .orElseThrow(() -> new ResourceNotFoundException("서버를 찾을 수 없습니다. ID: " + id));
 
         // 해당 서버에 할당된 IP 목록 조회
-        List<String> assignedIps = getAssignedIpAddresses(id);
+        List<Ip> assignedIps = ipRepository.findByAssignedTypeAndAssignedId(AssignedType.SERVER, server.getId());
 
         return new ServerResponse(server, assignedIps);
     }
@@ -100,9 +104,17 @@ public class ServerService {
         // FETCH JOIN이 적용된 Repository 메서드를 사용하여 N+1 쿼리 문제 방지
         List<Server> servers = serverRepository.findAllWithHardwareAndRack();
 
+        List<Long> serverIds = servers.stream().map(Server::getId).collect(Collectors.toList());
+        List<Ip> allIps = ipRepository.findByAssignedTypeAndAssignedIdIn(AssignedType.SERVER, serverIds);
+
+        // 🌟 장비 ID를 Key로 하여 소속된 IP 목록(List)을 그룹핑합니다.
+        java.util.Map<Long, List<Ip>> ipMap = allIps.stream()
+                .collect(Collectors.groupingBy(Ip::getAssignedId));
+
         return servers.stream().map(server -> {
-            List<String> assignedIps = getAssignedIpAddresses(server.getId());
-            return new ServerResponse(server, assignedIps);
+            // 해당 서버에 할당된 IP 리스트를 가져와서 DTO에 던짐
+            List<Ip> mappedIps = ipMap.getOrDefault(server.getId(), java.util.Collections.emptyList());
+            return new ServerResponse(server, mappedIps);
         }).collect(Collectors.toList());
     }
 
@@ -131,8 +143,12 @@ public class ServerService {
         // 🌟 추가된 부분: IP 정보가 변경되었을 수 있으므로, 기존 IP 해제 후 새 IP 재할당
         ipService.releaseIpForTarget(AssignedType.SERVER, server.getId());
 
-        if (dto.getIpAddress() != null && !dto.getIpAddress().isBlank()) {
-            ipService.allocateIp(dto.getIpCidrId(), dto.getIpAddress(), AssignedType.SERVER, server.getId());
+        // 🌟 N개의 IP 할당 루프
+        if (dto.getIps() != null && !dto.getIps().isEmpty()) {
+            for (IpAssignRequest ipReq : dto.getIps()) {
+                ipService.allocateIp(ipReq.getIpCidrId(), ipReq.getIpAddress(), AssignedType.SERVER,
+                        server.getId());
+            }
         }
 
         server.updateServerInfo(

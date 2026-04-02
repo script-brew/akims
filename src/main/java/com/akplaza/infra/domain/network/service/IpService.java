@@ -16,6 +16,8 @@ import com.akplaza.infra.domain.network.entity.Ip;
 import com.akplaza.infra.domain.network.entity.IpCidr;
 import com.akplaza.infra.domain.network.repository.IpCidrRepository;
 import com.akplaza.infra.domain.network.repository.IpRepository;
+import com.akplaza.infra.domain.device.repository.ServerRepository;
+import com.akplaza.infra.domain.device.repository.NetworkDeviceRepository;
 import com.akplaza.infra.global.error.exception.DuplicateResourceException;
 import com.akplaza.infra.global.error.exception.ResourceInUseException;
 import com.akplaza.infra.global.error.exception.ResourceNotFoundException;
@@ -31,6 +33,8 @@ public class IpService {
 
     private final IpRepository ipRepository;
     private final IpCidrRepository ipCidrRepository;
+    private final ServerRepository serverRepository;
+    private final NetworkDeviceRepository networkDeviceRepository;
 
     // ==========================================
     // 1. 타 도메인(Server, NetworkDevice)에서 호출하는 핵심 연동 로직
@@ -185,7 +189,21 @@ public class IpService {
 
         // 해당 대역(cidrId)에 속한 IP들만 조회하여 DTO로 변환
         List<IpResponse> ipResponses = ipRepository.findByIpCidrId(cidrId).stream()
-                .map(IpResponse::new)
+                .map(ip -> {
+                    IpResponse dto = new IpResponse(ip);
+
+                    // 🌟 15년 차의 디테일: 할당된 장비의 진짜 이름을 조회하여 툴팁에 매핑
+                    if (ip.isUsed() && ip.getAssignedId() != null) {
+                        if (ip.getAssignedType() == AssignedType.SERVER) {
+                            serverRepository.findById(ip.getAssignedId())
+                                    .ifPresent(s -> dto.setAssignedTargetName(s.getHostName()));
+                        } else if (ip.getAssignedType() == AssignedType.NETWORK_DEVICE) {
+                            networkDeviceRepository.findById(ip.getAssignedId())
+                                    .ifPresent(nd -> dto.setAssignedTargetName(nd.getName()));
+                        }
+                    }
+                    return dto;
+                })
                 .collect(Collectors.toList());
 
         return new IpCidrDetailResponse(ipCidr, ipResponses);

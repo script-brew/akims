@@ -103,6 +103,9 @@ public class ServerService {
         log.debug("전체 서버 목록 조회 요청");
         // FETCH JOIN이 적용된 Repository 메서드를 사용하여 N+1 쿼리 문제 방지
         List<Server> servers = serverRepository.findAllWithHardwareAndRack();
+        if (servers.isEmpty()) {
+            return java.util.Collections.emptyList();
+        }
 
         List<Long> serverIds = servers.stream().map(Server::getId).collect(Collectors.toList());
         List<Ip> allIps = ipRepository.findByAssignedTypeAndAssignedIdIn(AssignedType.SERVER, serverIds);
@@ -206,13 +209,5 @@ public class ServerService {
             throw new IllegalArgumentException("물리 서버(PHYSICAL)는 물리 하드웨어 매핑이 필수입니다.");
         }
         return null; // 가상화/클라우드 서버의 경우 정상적으로 null 반환
-    }
-
-    // 특정 대상(서버)에 할당된 IP 문자열 리스트 추출
-    private List<String> getAssignedIpAddresses(Long serverId) {
-        return ipRepository.findByAssignedTypeAndAssignedId(AssignedType.SERVER, serverId)
-                .stream()
-                .map(Ip::getIpAddress)
-                .collect(Collectors.toList());
     }
 }

@@ -9,6 +9,11 @@ const inputRackNo = document.getElementById("rack-no");
 const inputRackName = document.getElementById("rack-name");
 const inputRackSize = document.getElementById("rack-size");
 
+const tableBody = document.getElementById("rack-table-body");
+const visualContainer = document.getElementById("visual-rack-container");
+const visualTitle = document.getElementById("visual-rack-title");
+const rackGridArea = document.getElementById("rack-grid-area");
+
 const btnOpenModal = document.getElementById("btn-open-modal");
 const btnCancel = document.getElementById("btn-cancel");
 const btnSave = document.getElementById("btn-save");
@@ -24,6 +29,11 @@ document.addEventListener("DOMContentLoaded", async () => {
   await loadHardwares(); // 하드웨어 데이터를 먼저 확보
   await loadRacks(); // 이후 랙을 렌더링하면서 하드웨어를 꽂음
   setupEventListeners();
+});
+
+// 시각화 닫기 버튼 이벤트
+document.getElementById("btn-close-visual").addEventListener("click", () => {
+  visualContainer.style.display = "none";
 });
 
 // --- API Calls & Render ---
@@ -50,103 +60,168 @@ async function loadHardwares() {
 async function loadRacks() {
   try {
     rackList = await api.get("/api/v1/racks");
-    renderVisualRacks();
+    renderTable();
   } catch (error) {
     gridContainer.innerHTML = `<p style="color:red;">데이터 로드 실패</p>`;
   }
 }
 
-// 🌟 15년 차의 핵심: 여러 U를 차지하는 하드웨어 렌더링 알고리즘
-function renderVisualRacks() {
+// 🌟 1. 테이블 렌더링 로직 (새로 추가)
+function renderTable() {
   if (rackList.length === 0) {
-    gridContainer.innerHTML = `<p>등록된 랙(Rack)이 없습니다.</p>`;
+    tableBody.innerHTML = `<tr><td colspan="7" style="text-align:center;">등록된 랙이 없습니다.</td></tr>`;
     return;
   }
 
-  gridContainer.innerHTML = rackList
-    .map((rack) => {
-      // 현재 랙에 실장된 하드웨어 필터링
-      const hwInThisRack = hardwareList.filter((hw) => hw.rackId === rack.id);
-
-      let slotsHTML = "";
-      let skipUs = 0; // 하드웨어 크기(Size)에 따라 스킵할 U 갯수
-
-      // 랙의 최상단(예: 42U)부터 바닥(1U)으로 내려오면서 그립니다.
-      for (let u = rack.size; u >= 1; u--) {
-        // 이미 위쪽 하드웨어가 차지한 영역이면 HTML을 그리지 않고 건너뜁니다.
-        if (skipUs > 0) {
-          skipUs--;
-          continue;
-        }
-
-        // 하드웨어 위치 매핑: 보통 인프라 자산 관리는 하단 위치(rackPosition)를 기준으로 합니다.
-        // 최상단 U를 찾기 위해 (rackPosition + size - 1) 을 계산합니다.
-        const hw = hwInThisRack.find((h) => h.rackPosition + h.size - 1 === u);
-
-        if (hw) {
-          let typeClass = "hw-default";
-          if (hw.equipmentType === "SERVER") typeClass = "hw-server";
-          if (hw.equipmentType === "SWITCH" || hw.equipmentType === "ROUTER")
-            typeClass = "hw-switch";
-          if (hw.equipmentType === "STORAGE") typeClass = "hw-storage";
-
-          const powerAlert = hw.isSinglePower
-            ? `<span class="single-power-alert" title="단일 전원 장비입니다">◀</span>`
-            : "";
-
-          const hwName = hw.description || hw.equipmentType;
-
-          // 🌟 1U의 높이를 29px(border 1px 포함)로 계산하여 랙 슬롯 전체 높이 지정
-          const heightCss = `height: ${29 * hw.size}px;`;
-
-          // 🌟 15년 차의 핵심: 장비 크기만큼 연속된 U 번호 그룹(Rail) 생성
-          let uNumsHTML = `<div class="u-num-group">`;
-          for (let i = 0; i < hw.size; i++) {
-            // 예: 12U 위치에 4U 장비면 -> 12U, 11U, 10U, 9U 순서로 생성
-            uNumsHTML += `<div class="u-num">${u - i}U</div>`;
-          }
-          uNumsHTML += `</div>`;
-
-          slotsHTML += `
-              <div class="rack-slot" style="${heightCss}">
-                  ${uNumsHTML} <div class="hw-item-wrapper"> <div class="hw-item ${typeClass}">
-                          <div class="hw-info hw-name" title="${hwName}">${hwName}</div>
-                          <div class="hw-info hw-model" title="${hw.model}">${hw.model}</div>
-                          <div class="hw-info hw-serial" title="${hw.serialNo}">
-                              ${powerAlert} ${hw.serialNo}
-                          </div>
-                      </div>
-                  </div>
-              </div>
-          `;
-          skipUs = hw.size - 1;
-        } else {
-          // 비어있는 슬롯 (1U)
-          slotsHTML += `
-              <div class="rack-slot empty" style="height: 29px;">
-                  <div class="u-num-group">
-                      <div class="u-num">${u}U</div>
-                  </div>
-                  <div class="hw-item-wrapper empty-wrapper"></div>
-              </div>
-          `;
-        }
-      }
-
-      return `
-            <div class="rack-cabinet-wrapper">
-                <div class="rack-title">
-                    ${rack.name} [${rack.rackNo}]
-                    <button class="btn small danger" style="margin-left:10px;" onclick="window.deleteRack(${rack.id})">삭제</button>
-                </div>
-                <div class="rack-cabinet">
-                    ${slotsHTML}
-                </div>
-            </div>
-        `;
-    })
+  tableBody.innerHTML = rackList
+    .map(
+      (rack) => `
+        <tr>
+            <td><input type="checkbox" class="data-checkbox rack-checkbox-item" data-id="${
+              rack.id
+            }"></td>
+            <td><strong>${ui.escapeHtml(rack.locationName || "-")}</strong></td>
+            <td><strong>${ui.escapeHtml(rack.rackNo)}</strong></td>
+            <td>${ui.escapeHtml(rack.name || "-")}</td>
+            <td>${rack.size} U</td>
+            <td><span class="badge" style="background:#3498db;">${
+              rack.hardwareCount || 0
+            } 대</span></td>
+            <td>
+                <button class="btn small" onclick="window.viewVisualRack(${
+                  rack.id
+                })">랙 보기</button>
+            </td>
+        </tr>
+    `
+    )
     .join("");
 }
+
+// 🌟 2. 단일 랙 시각화 렌더링 로직 (기존 렌더링을 버튼 클릭 이벤트로 변경)
+window.viewVisualRack = (rackId) => {
+  const targetRack = rackList.find((r) => r.id === rackId);
+  if (!targetRack) return;
+
+  // 제목 및 컨테이너 노출
+  visualTitle.textContent = `랙 시각화 뷰 : ${targetRack.rackNo} (${
+    targetRack.name || "-"
+  }) / ${targetRack.size}U`;
+  visualContainer.style.display = "block";
+
+  const rackHwList = hardwareList.filter((hw) => hw.rackId === rackId);
+  let slotsHTML = "";
+  let skipUs = 0;
+
+  // 우리가 예전에 완성했던 완벽한 3단 그리드 + 흰색 배경 로직 그대로 사용!
+  for (let u = targetRack.size; u >= 1; u--) {
+    if (skipUs > 0) {
+      skipUs--;
+      continue;
+    }
+
+    const hw = rackHwList.find((h) => h.rackPosition === u);
+
+    if (hw) {
+      let typeClass = "hw-default";
+      if (hw.equipmentType === "SERVER") typeClass = "hw-server";
+      if (hw.equipmentType === "SWITCH" || hw.equipmentType === "ROUTER")
+        typeClass = "hw-switch";
+      if (hw.equipmentType === "STORAGE" || hw.equipmentType === "NAS")
+        typeClass = "hw-storage";
+
+      const powerAlert = hw.isSinglePower
+        ? `<span class="single-power-alert" title="단일 전원">◀</span>`
+        : "";
+      const hwName = ui.escapeHtml(hw.description || hw.equipmentType);
+      const heightCss = `height: ${29 * hw.size}px;`;
+
+      // 다중 U 나사선 레일 처리
+      let uNumsHTML = `<div class="u-num-group">`;
+      for (let i = 0; i < hw.size; i++) {
+        uNumsHTML += `<div class="u-num">${u - i}U</div>`;
+      }
+      uNumsHTML += `</div>`;
+
+      slotsHTML += `
+                <div class="rack-slot" style="${heightCss}">
+                    ${uNumsHTML}
+                    <div class="hw-item-wrapper">
+                        <div class="hw-item ${typeClass}">
+                            <div class="hw-info hw-name" title="${hwName}">${hwName}</div>
+                            <div class="hw-info hw-model" title="${ui.escapeHtml(
+                              hw.model
+                            )}">${ui.escapeHtml(hw.model)}</div>
+                            <div class="hw-info hw-serial" title="${ui.escapeHtml(
+                              hw.serialNo
+                            )}">
+                                ${powerAlert} ${ui.escapeHtml(hw.serialNo)}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+      skipUs = hw.size - 1;
+    } else {
+      slotsHTML += `
+                <div class="rack-slot empty" style="height: 29px;">
+                    <div class="u-num-group">
+                        <div class="u-num">${u}U</div>
+                    </div>
+                    <div class="hw-item-wrapper empty-wrapper"></div>
+                </div>
+            `;
+    }
+  }
+
+  // // 화면에 렌더링하고 부드럽게 스크롤
+  // rackGridArea.innerHTML = `
+  //       <div class="rack-cabinet" style="width: 450px;">
+  //           ${slotsHTML}
+  //       </div>
+  //   `;
+  // visualContainer.scrollIntoView({ behavior: "smooth", block: "start" });
+
+  if (locRacks.length === 0) {
+    // ... 데이터 없음 메시지 유지 ...
+  } else {
+    // 각 랙별로 캐비닛 HTML을 생성하여 가로로 이어붙임
+    rackGridArea.innerHTML = locRacks
+      .map((rack) => {
+        const rackHws = hardwareList.filter((h) => h.rackId === rack.id);
+        const slotsHtml = generateRackSlotsHTML(rack, rackHws);
+
+        // 🌟 수정됨: 고정 너비(min-width)와 flex-shrink를 제거하고, 너비를 100%로 설정하여 그리드 칸에 맞춥니다.
+        return `
+                <div class="rack-cabinet-wrapper" style="width: 100%;">
+                    <div style="text-align:center; margin-bottom: 12px; padding: 10px; background: #f1f2f6; border-radius: 6px; border: 1px solid #dcdde1;">
+                        <div style="font-size: 1.2rem; font-weight: bold; color: #2c3e50;">${ui.escapeHtml(
+                          rack.rackNo
+                        )}</div>
+                        <div style="color: #7f8c8d; font-size: 0.9rem; margin-bottom: 10px;">${ui.escapeHtml(
+                          rack.name || "-"
+                        )} (${rack.size}U)</div>
+                        <div>
+                            <button class="btn small" style="background-color:#f39c12;" onclick="window.editRack(${
+                              rack.id
+                            })">수정</button>
+                            <button class="btn small danger" onclick="window.deleteRack(${
+                              rack.id
+                            })">삭제</button>
+                        </div>
+                    </div>
+                    <div class="rack-cabinet" style="width: 100%;">
+                        ${slotsHtml}
+                    </div>
+                </div>
+            `;
+      })
+      .join("");
+  }
+
+  visualContainer.style.display = "block";
+  visualContainer.scrollIntoView({ behavior: "smooth", block: "start" });
+};
 
 // --- Event Listeners ---
 function setupEventListeners() {

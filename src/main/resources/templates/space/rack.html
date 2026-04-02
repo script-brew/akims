@@ -17,13 +17,68 @@
       <main class="app-main">
         <div class="content-header">
           <h2>랙(Rack) 관리</h2>
-          <button id="btn-open-modal" class="btn">새 랙 등록</button>
+          <div class="header-actions">
+            <button id="btn-open-modal" class="btn">새 랙 등록</button>
+            <button id="btn-edit" class="btn" style="background-color: #f39c12">
+              선택 수정
+            </button>
+            <button id="btn-delete" class="btn danger">선택 삭제</button>
+          </div>
         </div>
 
-        <div id="rack-grid-container" class="rack-grid">
-          <p style="text-align: center; width: 100%">
-            데이터를 불러오는 중입니다...
-          </p>
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th width="5%">
+                <input type="checkbox" id="check-all" class="data-checkbox" />
+              </th>
+              <th width="15%">상위 장소 (Location)</th>
+              <th width="20%">랙 번호 (Rack No)</th>
+              <th width="20%">랙 이름 (Name)</th>
+              <th width="10%">높이 (U)</th>
+              <th width="15%">실장 장비 수</th>
+              <th width="15%">상세 관리</th>
+            </tr>
+          </thead>
+          <tbody id="rack-table-body">
+            <tr>
+              <td colspan="7" style="text-align: center">
+                데이터를 불러오는 중입니다...
+              </td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div
+          id="visual-rack-container"
+          style="
+            display: none;
+            margin-top: 30px;
+            padding: 20px;
+            background: white;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+          "
+        >
+          <div
+            class="content-header"
+            style="
+              margin-bottom: 20px;
+              border-bottom: 2px solid var(--border-color);
+              padding-bottom: 10px;
+            "
+          >
+            <h3 id="visual-rack-title" style="color: var(--primary-color)">
+              랙 시각화
+            </h3>
+            <button id="btn-close-visual" class="btn cancel small">닫기</button>
+          </div>
+          <div
+            id="rack-grid-area"
+            class="rack-grid"
+            style="justify-content: center"
+          ></div>
         </div>
       </main>
     </div>

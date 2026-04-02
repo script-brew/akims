@@ -31,6 +31,8 @@ public class HardwareUpdateRequest {
     private Integer size;
 
     private Boolean isSinglePower;
+    private String powerLine;
+
     private String description;
     private Long rackId;
     private Integer rackPosition;

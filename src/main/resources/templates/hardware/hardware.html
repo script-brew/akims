@@ -32,13 +32,13 @@
               <th width="4%">
                 <input type="checkbox" id="check-all" class="data-checkbox" />
               </th>
-              <th width="12%">위치 정보</th>
-              <th width="10%">장비 구분</th>
-              <th width="15%">이름</th>
-              <th width="13%">시리얼 번호</th>
-              <th width="15%">모델명</th>
-              <th width="10%">도입년도</th>
+              <th width="10%">위치 정보</th>
               <th width="15%">실장 위치</th>
+              <th width="10%">장비 구분</th>
+              <th width="10%">도입년도</th>
+              <th width="15%">모델명</th>
+              <th width="10%">시리얼 번호</th>
+              <th width="20%">이름</th>
               <th width="10%">전원 상태</th>
             </tr>
           </thead>
@@ -99,12 +99,29 @@
             <label for="hw-size">크기 (U) *</label>
             <input type="number" id="hw-size" value="1" min="1" />
           </div>
+        </div>
+        <div class="form-row">
           <div class="form-group">
-            <label>전원 구성</label>
-            <label class="checkbox-label" style="margin-top: 10px">
-              <input type="checkbox" id="hw-single-power" />
-              단일 전원 (Single Power) 장비입니다.
-            </label>
+            <label>전원 이중화 여부</label>
+            <div style="margin-top: 8px">
+              <input
+                type="checkbox"
+                id="hw-single-power"
+                class="data-checkbox"
+              />
+              단일 전원
+            </div>
+          </div>
+          <div
+            class="form-group"
+            id="hw-power-line-group"
+            style="display: none"
+          >
+            <label>단일 전원 연결선 (PDU) *</label>
+            <select id="hw-power-line">
+              <option value="A">POWER A (좌측 PDU)</option>
+              <option value="B">POWER B (우측 PDU)</option>
+            </select>
           </div>
         </div>
 

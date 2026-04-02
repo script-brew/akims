@@ -92,6 +92,9 @@ public class NetworkDeviceService {
     public List<NetworkDeviceResponse> getAllNetworkDevices() {
         log.debug("전체 네트워크 장비 목록 조회 요청");
         List<NetworkDevice> devices = networkDeviceRepository.findAllWithHardwareAndRack();
+        if (devices.isEmpty()) {
+            return java.util.Collections.emptyList();
+        }
 
         // 🌟 15년 차의 최적화: N+1 문제 해결을 위해 IN 쿼리 단 1번으로 모든 할당 IP 조회
         List<Long> deviceIds = devices.stream().map(NetworkDevice::getId).collect(Collectors.toList());
@@ -181,12 +184,5 @@ public class NetworkDeviceService {
                     log.error("하드웨어 검증 실패 - 존재하지 않는 하드웨어 ID: {}", hardwareId);
                     return new ResourceNotFoundException("지정된 물리 하드웨어를 찾을 수 없습니다.");
                 });
-    }
-
-    private List<String> getAssignedIpAddresses(Long deviceId) {
-        return ipRepository.findByAssignedTypeAndAssignedId(AssignedType.NETWORK_DEVICE, deviceId)
-                .stream()
-                .map(Ip::getIpAddress)
-                .collect(Collectors.toList());
     }
 }

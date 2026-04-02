@@ -31,6 +31,7 @@ public class HardwareCreateRequest {
     private Integer size; // 차지하는 Rack 단위(U) (예: 1U, 2U)
 
     private Boolean isSinglePower;
+    private String powerLine;
 
     private String description;
 

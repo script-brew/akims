@@ -67,20 +67,34 @@
   border-bottom: none; /* 마지막 U는 밑줄 제거 */
 }
 
-/* 🌟 실장된 하드웨어 스타일 (기존 3단 Grid 유지) */
 .hw-item {
   flex: 1;
-  display: grid;
-  grid-template-columns: 1fr 2fr 1.2fr;
+  display: flex; /* 기존 grid에서 flex로 변경 */
   align-items: center;
-  padding: 0 10px;
+  justify-content: center; /* 텍스트 중앙 정렬 */
+  padding: 0 15px;
   height: 100%;
   color: white;
   font-weight: bold;
   border: 1px solid rgba(0, 0, 0, 0.2);
   border-radius: 4px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* 약간의 입체감 추가 */
-  gap: 10px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  cursor: pointer; /* 🌟 클릭 가능하도록 커서 변경 */
+  transition: transform 0.1s;
+}
+
+.hw-item:hover {
+  transform: scale(1.02); /* 마우스 오버 시 살짝 확대 효과 */
+  filter: brightness(1.1);
+}
+
+.hw-info.hw-name {
+  text-align: center;
+  font-size: 0.85rem;
+  width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* 🌟 하드웨어 장비 래퍼 (흰색 배경과 장비 사이에 여백을 주기 위함) */

@@ -14,6 +14,7 @@ public class HardwareResponse {
     private Integer introductionYear;
     private Integer size;
     private Boolean isSinglePower;
+    private String powerLine;
     private String description;
 
     // 위치 정보 (조인 데이터)
@@ -31,6 +32,7 @@ public class HardwareResponse {
         this.size = hardware.getSize();
         this.description = hardware.getDescription();
         this.isSinglePower = hardware.getIsSinglePower();
+        this.powerLine = hardware.getPowerLine();
 
         // Rack이 할당되어 있는 경우 (Null-safe)
         if (hardware.getRack() != null) {

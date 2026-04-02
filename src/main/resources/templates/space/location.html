@@ -2,11 +2,12 @@
 <html lang="ko" xmlns:th="http://www.thymeleaf.org">
   <head>
     <meta charset="UTF-8" />
-    <title>AKIMS - 장소 관리</title>
+    <title>AKIMS - 장소 및 랙 통합 관리</title>
     <link rel="stylesheet" th:href="@{/css/common.css}" />
     <link rel="stylesheet" th:href="@{/css/layout.css}" />
     <link rel="stylesheet" th:href="@{/css/components.css}" />
     <link rel="stylesheet" th:href="@{/css/domain/space/location.css}" />
+    <link rel="stylesheet" th:href="@{/css/domain/space/rack.css}" />
   </head>
   <body>
     <header th:replace="~{layout/header :: headerFragment}"></header>
@@ -16,52 +17,187 @@
 
       <main class="app-main">
         <div class="content-header">
-          <h2>장소(Location) 관리</h2>
-          <button id="btn-open-modal" class="btn">새 장소 등록</button>
+          <h2>장소 및 랙(Rack) 통합 관리</h2>
+          <div class="header-actions">
+            <button id="btn-open-loc-modal" class="btn">새 장소 등록</button>
+            <button
+              id="btn-edit-loc"
+              class="btn"
+              style="background-color: #f39c12"
+            >
+              선택 장소 수정
+            </button>
+            <button id="btn-delete-loc" class="btn danger">
+              선택 장소 삭제
+            </button>
+          </div>
         </div>
 
         <table class="data-table">
           <thead>
             <tr>
-              <th width="10%">ID</th>
-              <th width="60%">장소명</th>
-              <th width="30%">관리</th>
+              <th width="5%">
+                <input
+                  type="checkbox"
+                  id="check-all-loc"
+                  class="data-checkbox"
+                />
+              </th>
+              <th width="20%">장소명 (Location Name)</th>
+              <th width="25%">주소 (Address)</th>
+              <th width="15%">담당자 (Contact)</th>
+              <th width="15%">보유 랙(Rack) 수</th>
+              <th width="20%">상세 관리</th>
             </tr>
           </thead>
           <tbody id="location-table-body">
             <tr>
-              <td colspan="3" style="text-align: center">
+              <td colspan="6" style="text-align: center">
                 데이터를 불러오는 중입니다...
               </td>
             </tr>
           </tbody>
         </table>
+
+        <div
+          id="visual-rack-container"
+          style="
+            display: none;
+            margin-top: 40px;
+            padding: 25px;
+            background: white;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+          "
+        >
+          <div
+            class="content-header"
+            style="
+              margin-bottom: 25px;
+              border-bottom: 2px solid var(--border-color);
+              padding-bottom: 15px;
+            "
+          >
+            <h3
+              id="visual-title"
+              style="color: var(--primary-color); font-size: 1.4rem"
+            >
+              [장소명] 실장된 랙 뷰
+            </h3>
+            <div class="header-actions">
+              <button
+                id="btn-open-rack-modal"
+                class="btn"
+                style="background-color: #2ecc71"
+              >
+                + 이 장소에 새 랙 추가
+              </button>
+              <button id="btn-close-visual" class="btn cancel">닫기</button>
+            </div>
+          </div>
+          <div
+            id="rack-grid-area"
+            style="
+              display: grid;
+              grid-template-columns: repeat(4, 1fr);
+              gap: 40px;
+              padding-bottom: 20px;
+              align-items: flex-end;
+              width: 100%;
+            "
+          ></div>
+        </div>
       </main>
     </div>
 
     <footer th:replace="~{layout/footer :: footerFragment}"></footer>
 
-    <div id="location-modal" class="modal-overlay">
+    <div id="loc-modal" class="modal-overlay">
       <div class="modal-content">
-        <h3 id="modal-title">장소 등록</h3>
-        <div class="form-group">
-          <label for="location-name">장소명</label>
-          <input
-            type="text"
-            id="location-name"
-            placeholder="예: 상암 데이터센터"
-          />
-          <input type="hidden" id="location-id" />
+        <h3 id="loc-modal-title">장소 정보 등록</h3>
+        <input type="hidden" id="loc-id" />
+        <div class="form-group full">
+          <label>장소명 *</label><input type="text" id="loc-name" />
+        </div>
+        <div class="form-group full">
+          <label>주소</label><input type="text" id="loc-address" />
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>담당자 연락처</label><input type="text" id="loc-contact" />
+          </div>
+          <div class="form-group">
+            <label>설명/비고</label><input type="text" id="loc-desc" />
+          </div>
         </div>
         <div class="modal-actions">
-          <button id="btn-cancel" class="btn" style="background-color: #95a5a6">
-            취소
-          </button>
-          <button id="btn-save" class="btn">저장</button>
+          <button id="btn-cancel-loc" class="btn cancel">취소</button>
+          <button id="btn-save-loc" class="btn">저장</button>
         </div>
       </div>
     </div>
 
+    <div id="rack-modal" class="modal-overlay">
+      <div class="modal-content">
+        <h3 id="rack-modal-title">새 랙 등록</h3>
+        <input type="hidden" id="rack-id" />
+        <input type="hidden" id="rack-loc-id" />
+        <div class="form-row">
+          <div class="form-group">
+            <label>랙 번호 (Rack No) *</label><input type="text" id="rack-no" />
+          </div>
+          <div class="form-group">
+            <label>랙 이름</label><input type="text" id="rack-name" />
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>높이 (U) *</label
+            ><input type="number" id="rack-u" value="42" min="1" />
+          </div>
+          <div class="form-group">
+            <label>설명</label><input type="text" id="rack-desc" />
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button id="btn-cancel-rack" class="btn cancel">취소</button>
+          <button
+            id="btn-save-rack"
+            class="btn"
+            style="background-color: #2ecc71"
+          >
+            저장
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div id="hw-detail-modal" class="modal-overlay">
+      <div class="modal-content" style="width: 500px">
+        <h3
+          style="
+            color: var(--primary-color);
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+          "
+        >
+          하드웨어 상세 정보
+        </h3>
+        <div id="hw-detail-content" style="line-height: 1.8"></div>
+        <div
+          class="modal-actions"
+          style="
+            margin-top: 25px;
+            border-top: 1px solid #eee;
+            padding-top: 15px;
+          "
+        >
+          <button id="btn-close-hw-detail" class="btn cancel">닫기</button>
+        </div>
+      </div>
+    </div>
     <script type="module" th:src="@{/js/space/location.js}"></script>
   </body>
 </html>

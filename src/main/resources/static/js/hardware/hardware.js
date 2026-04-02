@@ -13,6 +13,8 @@ const inputModel = document.getElementById("hw-model");
 const inputYear = document.getElementById("hw-year");
 const inputSize = document.getElementById("hw-size");
 const chkSinglePower = document.getElementById("hw-single-power");
+const groupPowerLine = document.getElementById("hw-power-line-group");
+const selPowerLine = document.getElementById("hw-power-line");
 const selRack = document.getElementById("hw-rack");
 const inputPosition = document.getElementById("hw-position");
 const inputDesc = document.getElementById("hw-desc");
@@ -110,14 +112,14 @@ function renderTable() {
                   hw.id
                 }"></td>
                 <td><strong>${locationName}</strong></td>
+                <td>${rackInfo}</td>
                 <td><span class="badge ${getBadgeClass(hw.equipmentType)}">${
         hw.equipmentType
       }</span></td>
+      <td>${introductionYear}</td>
+      <td><strong>${hw.model}</strong></td>
+      <td>${hw.serialNo}</td>
                 <td><div class="text-ellipsis" title="${safeDesc}">${safeDesc}</div></td>
-                <td><strong>${hw.model}</strong></td>
-                <td>${hw.serialNo}</td>
-                <td>${introductionYear}</td>
-                <td>${rackInfo}</td>
                 <td>${powerBadge}</td>
             </tr>
         `;
@@ -138,6 +140,11 @@ function setupEventListeners() {
   btnDelete.addEventListener("click", handleDeleteAction);
 
   ui.setupCheckAll("check-all", "hw-checkbox-item");
+
+  chkSinglePower.addEventListener("change", (e) => {
+    groupPowerLine.style.display = e.target.checked ? "block" : "none";
+    if (!e.target.checked) selPowerLine.value = "";
+  });
 }
 
 function openCreateModal() {
@@ -148,15 +155,13 @@ function openCreateModal() {
   inputYear.value = new Date().getFullYear();
   inputSize.value = 1;
   chkSinglePower.checked = false;
+  groupPowerLine.style.display = target.isSinglePower ? "block" : "none";
+  selPowerLine.value = target.selPowerLine;
   selRack.value = "";
   inputPosition.value = "";
   inputDesc.value = "";
 
   ui.openModal("hw-modal", "modal-title", "하드웨어 장비 입고");
-}
-
-function closeModal() {
-  modal.style.display = "none";
 }
 
 async function saveHardware() {
@@ -172,6 +177,7 @@ async function saveHardware() {
     introductionYear: parseInt(inputYear.value),
     size: parseInt(inputSize.value),
     isSinglePower: chkSinglePower.checked,
+    powerLine: chkSinglePower.checked ? selPowerLine.value : "DUAL",
     rackId: rackIdVal,
     rackPosition: positionVal,
     description: inputDesc.value.trim(),
@@ -205,6 +211,8 @@ function openEditModal(id) {
   inputYear.value = target.introductionYear;
   inputSize.value = target.size;
   chkSinglePower.checked = target.isSinglePower;
+  groupPowerLine.style.display = target.isSinglePower ? "block" : "none";
+  selPowerLine.value = target.selPowerLine;
   selRack.value = target.rackId || "";
   inputPosition.value = target.rackPosition || "";
   inputDesc.value = target.description || "";

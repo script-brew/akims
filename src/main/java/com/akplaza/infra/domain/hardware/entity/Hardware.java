@@ -59,6 +59,7 @@ public class Hardware extends BaseTimeEntity {
     // 🌟 추가: 단일 전원 여부 (true: 단일 전원, false/null: 이중 전원 이상)
     @Column(name = "is_single_power")
     private Boolean isSinglePower;
+    private String powerLine;
 
     @Lob // 설명이 길어질 수 있으므로 Large Object 타입으로 지정
     private String description; // 장비 설명 및 비고
@@ -71,7 +72,7 @@ public class Hardware extends BaseTimeEntity {
 
     public void updateHardwareInfo(String model, String serialNo, EquipmentType equipmentType,
             Integer introductionYear, Integer size, String description,
-            Rack rack, Integer rackPosition, Boolean isSinglePower) {
+            Rack rack, Integer rackPosition, Boolean isSinglePower, String powerLine) {
         this.model = model;
         this.serialNo = serialNo;
         this.equipmentType = equipmentType;
@@ -81,11 +82,13 @@ public class Hardware extends BaseTimeEntity {
         this.rack = rack;
         this.rackPosition = rackPosition;
         this.isSinglePower = isSinglePower;
+        this.powerLine = powerLine;
     }
 
     @Builder
     public Hardware(Rack rack, Integer rackPosition, Integer size, EquipmentType equipmentType,
-            Integer introductionYear, String model, String serialNo, String description, Boolean isSinglePower) {
+            Integer introductionYear, String model, String serialNo, String description, Boolean isSinglePower,
+            String powerLine) {
         this.rack = rack;
         this.rackPosition = rackPosition;
         this.size = size != null ? size : 1; // 기본 1U
@@ -95,5 +98,6 @@ public class Hardware extends BaseTimeEntity {
         this.serialNo = serialNo;
         this.description = description;
         this.isSinglePower = isSinglePower;
+        this.powerLine = powerLine;
     }
 }

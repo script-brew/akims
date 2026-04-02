@@ -18,9 +18,20 @@ const selIpCidr = document.getElementById("srv-ip-cidr");
 const inputIpAddress = document.getElementById("srv-ip-address");
 const selHardware = document.getElementById("srv-hardware");
 const inputDesc = document.getElementById("srv-desc");
+
+const chkHa = document.getElementById("srv-ha");
+const selBackup = document.getElementById("srv-backup");
+const selMonitoring = document.getElementById("srv-monitoring");
+
 const hardwareMappingArea = document.getElementById("hardware-mapping-area");
 const ipListContainer = document.getElementById("ip-list-container");
 const diskListContainer = document.getElementById("disk-list-container");
+const swContainer = document.getElementById("sw-list-container");
+const dbmsContainer = document.getElementById("dbms-list-container");
+
+const detailContainer = document.getElementById("server-detail-container");
+const detailTitle = document.getElementById("detail-title");
+const detailContent = document.getElementById("server-detail-content");
 // Buttons
 const btnOpenModal = document.getElementById("btn-open-modal");
 const btnEdit = document.getElementById("btn-edit");
@@ -29,6 +40,9 @@ const btnCancel = document.getElementById("btn-cancel");
 const btnSave = document.getElementById("btn-save");
 const btnAddIp = document.getElementById("btn-add-ip");
 const btnAddDisk = document.getElementById("btn-add-disk");
+const btnAddSw = document.getElementById("btn-add-sw");
+const btnCloseDetail = document.getElementById("btn-close-detail");
+
 // --- State ---
 let serverList = [];
 let hardwareList = [];
@@ -169,6 +183,21 @@ function createDiskRow(type = "SSD", capacity = 100, mount = "/") {
   diskListContainer.appendChild(row);
 }
 
+// 🌟 S/W 동적 행 생성
+function createSwRow(name = "", version = "", purpose = "") {
+  const row = document.createElement("div");
+  row.className = "sw-row form-row";
+  row.style.marginBottom = "0";
+  row.innerHTML = `
+        <input type="text" class="sw-name" placeholder="S/W명 (예: Tomcat)" value="${name}" style="flex:2;">
+        <input type="text" class="sw-version" placeholder="버전" value="${version}" style="flex:1;">
+        <input type="text" class="sw-purpose" placeholder="용도" value="${purpose}" style="flex:2;">
+        <button type="button" class="btn small danger btn-remove">X</button>
+    `;
+  row.querySelector(".btn-remove").onclick = () => row.remove();
+  swContainer.appendChild(row);
+}
+
 function renderTable() {
   if (serverList.length === 0) {
     tableBody.innerHTML = `<tr><td colspan="8" style="text-align:center;">등록된 서버가 없습니다.</td></tr>`;
@@ -206,22 +235,28 @@ function renderTable() {
                 <td><input type="checkbox" class="data-checkbox srv-checkbox-item" data-id="${
                   srv.id
                 }"></td>
-                <td><strong>${
-                  srv.hostName
-                }</strong><br><small style="color:#777;">${
-        srv.description || ""
-      }</small></td>
-                <td><span class="os-badge ${getOsClass(srv.os)}">${
-        srv.os
-      }</span></td>
+                <td>${srv.environment}</td>
+                
                 <td><span class="badge ${getTypeBadge(srv.serverType)}">${
         srv.serverType
       }</span></td>
-                <td>${srv.cpuCore} Core / ${srv.memoryGb} GB</td>
-                <td>${diskDisplay}</td>
-                <td>${ipDisplay}</td> <td>${hwInfo}</td>
                 <td>${srv.serverCategory}</td>
-                <td><div class="text-ellipsis" title="${safeDesc}">${safeDesc}</div></td>
+                <td>
+                    <a href="#" onclick="window.viewServerDetail(${
+                      srv.id
+                    }); return false;" style="color: #2980b9; text-decoration: underline; font-weight: bold; font-size: 1.1rem;">
+                        ${ui.escapeHtml(srv.hostName)}
+                    </a>
+                    <br><small style="color:#777;">${ui.escapeHtml(
+                      srv.description || ""
+                    )}</small>
+                </td>
+                <td><span class="os-badge ${getOsClass(srv.os)}">${
+        srv.os
+      }</span></td>
+                
+                <td>${srv.cpuCore} Core / ${srv.memoryGb} GB</td>
+                <td>${ipDisplay}</td> <td>${hwInfo}</td>
             </tr>
         `;
     })
@@ -237,12 +272,15 @@ function setupEventListeners() {
   btnDelete.addEventListener("click", handleDeleteAction);
   btnAddIp.addEventListener("click", () => createIpRow()); // 🌟 IP 추가 버튼
   btnAddDisk.addEventListener("click", () => createDiskRow()); // 🌟 디스크 추가 버튼
-
+  btnAddSw.addEventListener("click", () => createSwRow());
+  btnCloseDetail.addEventListener("click", () => {
+    detailContainer.style.display = "none";
+  });
   ui.setupCheckAll("check-all", "srv-checkbox-item");
 
   // 🌟 15년 차의 디테일: 서버 타입에 따른 동적 UI 변경
   selType.addEventListener("change", (e) => {
-    if (e.target.value === "CLOUD") {
+    if (e.target.value === "AWS" || e.target.value === "SCP") {
       hardwareMappingArea.style.display = "none"; // 클라우드는 물리 장비 선택 안 함
       selHardware.value = "";
     } else {
@@ -259,10 +297,13 @@ function openCreateModal() {
   selEnvironment.value = "PRD"; // 🌟 초기값
   selType.value = "VIRTUAL";
   inputOs.value = "";
-  inputCpu.value = 4;
-  inputRam.value = 8;
+  inputCpu.value = 1;
+  inputRam.value = 0.5;
   selHardware.value = "";
   inputDesc.value = "";
+  chkHa.checked = false;
+  selBackup.value = "NO_BACKUP";
+  selMonitoring.value = "NO_MONITORING";
   ipListContainer.innerHTML = ""; // 초기화
   createIpRow(); // 기본 1개 칸은 띄워줌
   diskListContainer.innerHTML = "";
@@ -282,10 +323,15 @@ function openEditModal(id) {
   selEnvironment.value = target.environment || "PRD";
   selType.value = target.serverType;
   inputOs.value = target.os;
-  inputCpu.value = target.cpuCore || target.spec?.cpuCore || 4;
-  inputRam.value = target.memoryGb || target.spec?.memoryGb || 8;
+  inputCpu.value = target.cpuCore || target.spec?.cpuCore || 1;
+  inputRam.value = target.memoryGb || target.spec?.memoryGb || 0.5;
+
+  chkHa.checked = target.ha;
+  selBackup.value = target.backupInfo || "NO_BACKUP";
+  selMonitoring.value = target.monitoringInfo || "NO_MONITORING";
 
   ipListContainer.innerHTML = "";
+
   if (target.ips && target.ips.length > 0) {
     target.ips.forEach((ipData) =>
       createIpRow(ipData.ipCidrId, ipData.ipAddress)
@@ -302,7 +348,12 @@ function openEditModal(id) {
   } else {
     createDiskRow();
   }
-
+  swContainer.innerHTML = "";
+  if (target.softwares && target.softwares.length > 0) {
+    target.softwares.forEach((sw) =>
+      createSwRow(sw.name, sw.version, sw.purpose)
+    );
+  }
   selHardware.value = target.hardwareId || "";
   inputDesc.value = target.description || "";
 
@@ -373,10 +424,31 @@ async function saveServer() {
       });
     }
   });
+  // S/W 데이터 수집
+  const softwares = [];
+  document.querySelectorAll(".sw-row").forEach((row) => {
+    const n = row.querySelector(".sw-name").value.trim();
+    const v = row.querySelector(".sw-version").value.trim();
+    const p = row.querySelector(".sw-purpose").value.trim();
+    if (n && v)
+      softwares.push({
+        name: n,
+        version: v,
+        purpose: p,
+        maintenanceInfo: "",
+      });
+  });
 
   // ==============================================================
   // 🌟 2. 기존 정상 저장 로직
   // ==============================================================
+  if (
+    (selType.value === "PHYSICAL" || selType.value === "VIRTUAL") &&
+    selHardware.value === ""
+  ) {
+    alert(`하드웨어 정보는 필수입니다!`);
+    return; // 루프 중단
+  }
   const hwIdVal = selHardware.value === "" ? null : parseInt(selHardware.value);
 
   const requestData = {
@@ -385,12 +457,16 @@ async function saveServer() {
     serverCategory: selCategory.value,
     serverType: selType.value,
     os: inputOs.value.trim(),
-    cpuCore: parseInt(inputCpu.value),
-    memoryGb: parseInt(inputRam.value),
+    cpuCore: parseFloat(inputCpu.value),
+    memoryGb: parseFloat(inputRam.value),
     hardwareId: hwIdVal,
     description: inputDesc.value.trim(),
+    ha: chkHa.checked,
+    backupInfo: selBackup.value.trim(),
+    monitoringInfo: selMonitoring.value.trim(),
     ips: ips, // 🌟 검증을 무사히 통과한 N개의 IP 리스트 전송
     disks: disks,
+    softwares: softwares,
   };
 
   try {
@@ -428,3 +504,135 @@ async function handleDeleteAction() {
     console.error("삭제 실패", error);
   }
 }
+
+// 🌟 서버 상세 드릴다운 뷰 렌더링
+window.viewServerDetail = (id) => {
+  const srv = serverList.find((s) => s.id === id);
+  if (!srv) return;
+
+  // 1. 타이틀 설정
+  const envBadge =
+    srv.environment === "PRD"
+      ? '<span style="color:#c0392b;">[운영]</span>'
+      : '<span style="color:#27ae60;">[개발/검증]</span>';
+  detailTitle.innerHTML = `${envBadge} ${srv.hostName} / ${srv.description} 상세 자산 정보`;
+
+  // 2. 하드웨어/기본 정보 파싱
+  const hwInfo = srv.hardwareId
+    ? `
+    <div style="margin-bottom: 8px;"><strong>위치: </strong> ${srv.locationName}</div>
+    <div style="margin-bottom: 8px;"><strong>랙정보: </strong> ${srv.rackNo}</div>
+    <div style="margin-bottom: 8px;"><strong>하드웨어 정보: </strong> ${srv.hardwareDescription}</div>
+    <div style="margin-bottom: 8px;"><strong>모델: </strong> ${srv.hardwareModel}</div>
+    <div style="margin-bottom: 8px;"><strong>시리얼넘버: </strong> ${srv.serialNo}</div>
+    `
+    : '<span style="color:#999;">클라우드 / 가상화 (미할당)</span>';
+
+  // 3. 디스크 정보 파싱
+  const disks =
+    srv.disks && srv.disks.length > 0
+      ? srv.disks
+          .map(
+            (d) =>
+              `<div style="margin-bottom:4px;">[${d.diskType}] <strong>${d.size}GB</strong> <code style="font-size:0.8rem;">${d.mountPoint}</code></div>`
+          )
+          .join("")
+      : '<span style="color:#999;">등록된 디스크 없음</span>';
+
+  // 4. 소프트웨어 및 DBMS 정보 파싱
+  const sw =
+    srv.softwares && srv.softwares.length > 0
+      ? srv.softwares
+          .map(
+            (s) =>
+              `<div>• ${s.name} <small style="color:#777;">(${
+                s.version || "v.알수없음"
+              })</small></div>`
+          )
+          .join("")
+      : '<span style="color:#999;">등록된 S/W 없음</span>';
+
+  const dbms =
+    srv.dbmses && srv.dbmses.length > 0
+      ? srv.dbmses
+          .map(
+            (d) =>
+              `<div>• <strong style="color:#8e44ad;">${
+                d.name
+              }</strong> <small style="color:#777;">(${
+                d.version || ""
+              })</small></div>`
+          )
+          .join("")
+      : '<span style="color:#999;">등록된 DBMS 없음</span>';
+
+  // 5. 4분할 카드 렌더링
+  detailContent.innerHTML = `
+        <div style="background: #f8f9fa; padding: 15px; border-radius: 6px; border: 1px solid #e0e0e0;">
+            <h4 style="border-bottom: 2px solid #bdc3c7; padding-bottom: 8px; margin-bottom: 12px; color: #2c3e50;">기본 스펙</h4>
+            <div style="margin-bottom: 8px;"><strong>OS:</strong> <span class="os-badge ${getOsClass(
+              srv.os
+            )}">${srv.os}</span></div>
+            <div style="margin-bottom: 8px;"><strong>CPU/RAM:</strong> ${
+              srv.cpuCore
+            } Core / ${srv.memoryGb} GB</div>
+            <div style="margin-bottom: 8px;"><strong>유형:</strong> <span class="badge ${getTypeBadge(
+              srv.serverType
+            )}">${srv.serverType}</span></div>
+            <div style="margin-bottom: 8px;"><strong>HA 구성:</strong> ${
+              srv.ha
+                ? '<span style="color:#e74c3c; font-weight:bold;">Active (이중화)</span>'
+                : "단일 노드"
+            }</div>
+            <div style="margin-bottom: 8px;"><strong>백업: </strong> ${
+              srv.backupInfo === "NO_BACKUP"
+                ? '<span style="color:#e74c3c; font-weight:bold;">X</span>'
+                : srv.backupInfo
+            }</div>
+            <div style="margin-bottom: 8px;"><strong>모니터링: </strong> ${
+              srv.monitoringInfo === "NO_MONITORING"
+                ? '<span style="color:#e74c3c; font-weight:bold;">X</span>'
+                : srv.monitoringInfo
+            }</div>
+        </div>
+
+        <div style="background: #f8f9fa; padding: 15px; border-radius: 6px; border: 1px solid #e0e0e0;">
+            <h4 style="border-bottom: 2px solid #bdc3c7; padding-bottom: 8px; margin-bottom: 12px; color: #2c3e50;">물리 장비 스펙</h4>
+            <div style="margin-top:5px; line-height:1.4;">${hwInfo}</div>
+        </div>
+
+        <div style="background: #f8f9fa; padding: 15px; border-radius: 6px; border: 1px solid #e0e0e0;">
+            <h4 style="border-bottom: 2px solid #bdc3c7; padding-bottom: 8px; margin-bottom: 12px; color: #2c3e50;">네트워크 & 스토리지</h4>
+            <div style="margin-bottom: 8px;">
+                <strong>할당된 IP 주소:</strong>
+                <div style="margin-top:5px;">
+                    ${
+                      srv.ips && srv.ips.length > 0
+                        ? srv.ips
+                            .map(
+                              (ip) =>
+                                `<code style="display:inline-block; margin-bottom:4px; font-weight:bold;">${ip.ipAddress}</code>`
+                            )
+                            .join("<br>")
+                        : '<span style="color:#999;">미할당</span>'
+                    }
+                </div>
+            </div>
+            <div style="margin-top: 15px; padding-top: 10px; border-top: 1px dashed #ccc;">
+                <strong>스토리지 (디스크):</strong>
+                <div style="margin-top:5px; line-height:1.4;">${disks}</div>
+            </div>
+        </div>
+
+        <div style="background: #f8f9fa; padding: 15px; border-radius: 6px; border: 1px solid #e0e0e0;">
+            <h4 style="border-bottom: 2px solid #bdc3c7; padding-bottom: 8px; margin-bottom: 12px; color: #2c3e50;">소프트웨어 (S/W)</h4>
+            <div style="line-height:1.6; font-size:0.95rem;">
+                ${sw}
+            </div>
+        </div>
+    `;
+
+  // 6. 컨테이너 노출 및 스크롤 이동
+  detailContainer.style.display = "block";
+  detailContainer.scrollIntoView({ behavior: "smooth", block: "start" });
+};

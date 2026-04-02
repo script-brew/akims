@@ -32,14 +32,14 @@
               <th width="4%">
                 <input type="checkbox" id="check-all" class="data-checkbox" />
               </th>
+              <th width="5%">환경</th>
+              <th width="5%">서버 타입</th>
+              <th width="5%">카테고리</th>
               <th width="15%">호스트명(HostName)</th>
               <th width="12%">운영체제(OS)</th>
-              <th width="12%">서버 타입</th>
-              <th width="12%">스펙(vCPU/RAM)</th>
-              <th width="10%">디스크</th>
-              <th width="15%">IP 주소</th>
-              <th width="20%">물리 호스트 (Hardware)</th>
-              <th width="10%">용도</th>
+              <th width="10%">스펙</th>
+              <th width="10%">IP 주소</th>
+              <th width="15%">물리 호스트 (Hardware)</th>
             </tr>
           </thead>
           <tbody id="server-table-body">
@@ -50,6 +50,41 @@
             </tr>
           </tbody>
         </table>
+        <div
+          id="server-detail-container"
+          style="
+            display: none;
+            margin-top: 30px;
+            padding: 25px;
+            background: #ffffff;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+          "
+        >
+          <div
+            class="content-header"
+            style="
+              margin-bottom: 20px;
+              border-bottom: 2px solid #ecf0f1;
+              padding-bottom: 15px;
+            "
+          >
+            <h3 id="detail-title" style="color: #2c3e50; font-size: 1.3rem">
+              [환경] 서버명 상세 스펙
+            </h3>
+            <button id="btn-close-detail" class="btn cancel small">닫기</button>
+          </div>
+
+          <div
+            id="server-detail-content"
+            style="
+              display: grid;
+              grid-template-columns: repeat(4, 1fr);
+              gap: 20px;
+            "
+          ></div>
+        </div>
       </main>
     </div>
 
@@ -62,7 +97,7 @@
 
         <div class="form-row">
           <div class="form-group">
-            <label for="srv-category">서버 용도 *</label>
+            <label for="srv-category">카테고리 *</label>
             <select id="srv-category">
               <option value="WEB">WEB 서버</option>
               <option value="WAS">WAS 서버</option>
@@ -70,17 +105,6 @@
               <option value="UTIL">유틸/관리 서버</option>
             </select>
           </div>
-          <div class="form-group">
-            <label for="srv-hostname">호스트명 (HostName) *</label>
-            <input
-              type="text"
-              id="srv-hostname"
-              placeholder="예: ak-prd-web01"
-            />
-          </div>
-        </div>
-
-        <div class="form-row">
           <div class="form-group">
             <label for="srv-environment">운영 환경 *</label>
             <select id="srv-environment">
@@ -90,13 +114,25 @@
               <option value="DR">재해복구 (DR)</option>
             </select>
           </div>
+        </div>
+
+        <div class="form-row">
           <div class="form-group">
             <label for="srv-type">서버 타입 *</label>
             <select id="srv-type">
               <option value="VIRTUAL">가상 머신 (VM)</option>
               <option value="PHYSICAL">물리 서버 (Baremetal)</option>
-              <option value="CLOUD">클라우드 (AWS, GCP 등)</option>
+              <option value="AWS">AWS 클라우드</option>
+              <option value="SCP">SCP 클라우드</option>
             </select>
+          </div>
+          <div class="form-group">
+            <label for="srv-hostname">호스트명 (HostName) *</label>
+            <input
+              type="text"
+              id="srv-hostname"
+              placeholder="예: ak-prd-web01"
+            />
           </div>
         </div>
 
@@ -112,12 +148,76 @@
           <div class="form-group" style="display: flex; gap: 10px">
             <div style="flex: 1">
               <label for="srv-cpu">vCPU *</label>
-              <input type="number" id="srv-cpu" value="4" min="1" />
+              <input
+                type="number"
+                id="srv-cpu"
+                value="1"
+                min="0.1"
+                step="0.1"
+              />
             </div>
             <div style="flex: 1">
               <label for="srv-ram">Memory(GB) *</label>
-              <input type="number" id="srv-ram" value="8" min="1" />
+              <input
+                type="number"
+                id="srv-ram"
+                value="0.5"
+                min="0.5"
+                step="0.1"
+              />
             </div>
+          </div>
+        </div>
+
+        <hr
+          style="
+            border: 0;
+            border-top: 1px solid var(--border-color);
+            margin-bottom: 15px;
+          "
+        />
+
+        <div class="form-row">
+          <div class="form-group">
+            <label style="margin: 0">이중화 여부</label>
+            <label
+              for="srv-ha"
+              style="
+                display: inline-flex;
+                flex-direction: row;
+                align-items: center;
+                gap: 6px;
+                margin: 0;
+                font-weight: normal;
+                cursor: pointer;
+              "
+            >
+              <input
+                type="checkbox"
+                id="srv-ha"
+                class="data-checkbox"
+                style="margin: 0; width: 16px; height: 16px; cursor: pointer"
+              />
+              <span style="padding-top: 2px">HA 장비</span>
+            </label>
+          </div>
+          <div class="form-group">
+            <label for="srv-monitoring">모니터링 여부</label>
+            <select id="srv-monitoring">
+              <option value="NO_MONITORING">모니터링X</option>
+              <option value="PROMETHEUS">프로메테우스</option>
+              <option value="MAXIGENT">맥시전트</option>
+              <option value="ZABBIX">자빅스</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="srv-backup">백업 여부</label>
+            <select id="srv-backup">
+              <option value="NO_BACKUP">백업X</option>
+              <option value="NETBACKUP">넷백업</option>
+              <option value="CLOUD_BACKUP">클라우드백업(AWS,SCP)</option>
+              <option value="LOCAL_BACKUP">로컬백업(ArcServe,NIM)</option>
+            </select>
           </div>
         </div>
 
@@ -202,6 +302,49 @@
               border: 1px solid var(--border-color);
             "
           ></div>
+        </div>
+        <hr
+          style="
+            border: 0;
+            border-top: 1px solid var(--border-color);
+            margin: 15px 0;
+          "
+        />
+
+        <div class="form-row">
+          <div class="form-group" style="flex: 1">
+            <div
+              style="
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 5px;
+              "
+            >
+              <label style="margin: 0">설치된 S/W 목록</label>
+              <button
+                type="button"
+                id="btn-add-sw"
+                class="btn small"
+                style="background-color: #2980b9"
+              >
+                + S/W 추가
+              </button>
+            </div>
+            <div
+              id="sw-list-container"
+              style="
+                display: flex;
+                flex-direction: column;
+                gap: 8px;
+                background: #f8f9fa;
+                padding: 10px;
+                border-radius: 4px;
+                border: 1px solid var(--border-color);
+                min-height: 50px;
+              "
+            ></div>
+          </div>
         </div>
 
         <div id="hardware-mapping-area" class="form-group full">

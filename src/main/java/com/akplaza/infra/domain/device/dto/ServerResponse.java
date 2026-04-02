@@ -5,7 +5,9 @@ import java.util.stream.Collectors;
 
 import com.akplaza.infra.domain.device.entity.Disk;
 import com.akplaza.infra.domain.device.entity.Server;
+import com.akplaza.infra.domain.software.entity.Software;
 import com.akplaza.infra.domain.network.dto.IpAssignRequest;
+import com.akplaza.infra.domain.software.dto.SoftwareResponse;
 import com.akplaza.infra.domain.network.entity.Ip;
 
 import lombok.Getter;
@@ -19,22 +21,28 @@ public class ServerResponse {
     private String serverType;
     private String platform;
     private String os;
-    private Integer cpuCore;
-    private Integer memoryGb;
+    private Double cpuCore;
+    private Double memoryGb;
+    private String description;
     private boolean ha;
+    private String monitoringInfo;
+    private String backupInfo;
 
     // 하드웨어 정보 (조인된 데이터)
     private Long hardwareId;
     private String hardwareModel;
+    private String serialNo;
     private String locationName; // 장소명
     private String rackNo; // 랙 번호
+    private String hardwareDescription;
 
     // IP 목록 (IpService 등을 통해 주입)
     private List<IpAssignRequest> ips;
     private List<DiskResponse> disks;
+    private List<SoftwareResponse> softwares;
 
     // 엔티티를 DTO로 변환하는 생성자
-    public ServerResponse(Server server, List<Ip> assignedIps, List<Disk> disks) {
+    public ServerResponse(Server server, List<Ip> assignedIps, List<Disk> disks, List<Software> softwares) {
         this.id = server.getId();
         this.hostName = server.getHostName();
         this.serverCategory = server.getServerCategory().name();
@@ -45,6 +53,9 @@ public class ServerResponse {
         this.cpuCore = server.getSpec() != null ? server.getSpec().getCpuCore() : 0;
         this.memoryGb = server.getSpec() != null ? server.getSpec().getMemoryGb() : 0;
         this.ha = server.isHa();
+        this.description = server.getDescription();
+        this.monitoringInfo = server.getMonitoringInfo().name();
+        this.backupInfo = server.getBackupInfo().name();
 
         // 연관된 하드웨어가 있는 경우 정보 추출 (Null-safe 처리)
         if (server.getHardware() != null) {
@@ -53,6 +64,8 @@ public class ServerResponse {
             if (server.getHardware().getRack() != null) {
                 this.rackNo = server.getHardware().getRack().getRackNo();
                 this.locationName = server.getHardware().getRack().getLocation().getName();
+                this.serialNo = server.getHardware().getSerialNo();
+                this.hardwareDescription = server.getHardware().getDescription();
             }
         }
 
@@ -64,6 +77,10 @@ public class ServerResponse {
         }
         if (disks != null) {
             this.disks = disks.stream().map(DiskResponse::new).collect(Collectors.toList());
+        }
+
+        if (softwares != null) {
+            this.softwares = softwares.stream().map(SoftwareResponse::new).collect(Collectors.toList());
         }
     }
 }

@@ -93,11 +93,33 @@
       <div class="modal-content">
         <h3 id="modal-title">새 IP 대역 등록</h3>
         <div class="form-group full">
-          <label for="cidr-block">CIDR 대역 (예: 10.10.10.0/24)</label>
-          <input type="text" id="cidr-block" placeholder="192.168.1.0/24" />
-          <small style="color: #7f8c8d"
-            >※ 현재는 C클래스(/24, 256개) 시각화에 최적화되어 있습니다.</small
-          >
+          <label>IP 대역 (Network Address / CIDR) *</label>
+          <div style="display: flex; gap: 10px; align-items: center">
+            <input
+              type="text"
+              id="cidr-prefix"
+              placeholder="예: 192.168.10.0"
+              style="flex: 3"
+            />
+            <span style="font-size: 1.2rem; font-weight: bold; color: #7f8c8d"
+              >/</span
+            >
+            <select id="cidr-mask" style="flex: 1">
+              <option value="16">16 (65,536개)</option>
+              <option value="17">17</option>
+              <option value="18">18</option>
+              <option value="19">19</option>
+              <option value="20">20</option>
+              <option value="21">21</option>
+              <option value="22">22</option>
+              <option value="23">23</option>
+              <option value="24" selected>24 (256개)</option>
+              <option value="25">25 (128개)</option>
+              <option value="26">26 (64개)</option>
+              <option value="27">27 (32개)</option>
+              <option value="28">28 (16개)</option>
+            </select>
+          </div>
         </div>
         <div class="form-group full">
           <label for="cidr-desc">대역 설명 / 용도</label>

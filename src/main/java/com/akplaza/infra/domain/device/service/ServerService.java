@@ -22,6 +22,9 @@ import com.akplaza.infra.domain.network.entity.AssignedType;
 import com.akplaza.infra.domain.network.entity.Ip;
 import com.akplaza.infra.domain.network.repository.IpRepository;
 import com.akplaza.infra.domain.network.service.IpService;
+import com.akplaza.infra.domain.software.entity.Software;
+import com.akplaza.infra.domain.software.repository.SoftwareRepository;
+import com.akplaza.infra.domain.software.service.SoftwareService;
 import com.akplaza.infra.global.error.exception.DuplicateResourceException;
 import com.akplaza.infra.global.error.exception.ResourceNotFoundException;
 
@@ -40,6 +43,8 @@ public class ServerService {
     private final IpRepository ipRepository; // 조회용
     private final DiskService diskService; // 디스크 할당용
     private final DiskRepository diskRepository; // 조회용
+    private final SoftwareRepository softwareRepository; // 조회용
+    private final SoftwareService softwareService; // 소프트웨어 할당용
 
     // ==========================================
     // 1. 서버 생성 (CREATE)
@@ -85,6 +90,7 @@ public class ServerService {
         }
 
         diskService.syncDisksToServer(savedServer.getId(), dto.getDisks());
+        softwareService.syncSoftwaresToServer(savedServer.getId(), dto.getSoftwares());
 
         log.info("서버 등록 트랜잭션 성공적으로 완료 - 최종 ID: {}", savedServer.getId());
         return savedServer.getId();
@@ -102,8 +108,9 @@ public class ServerService {
         // 해당 서버에 할당된 IP 목록 조회
         List<Ip> assignedIps = ipRepository.findByAssignedTypeAndAssignedId(AssignedType.SERVER, server.getId());
         List<Disk> disks = diskRepository.findByServerId(server.getId());
+        List<Software> softwares = softwareRepository.findByServerId(server.getId());
 
-        return new ServerResponse(server, assignedIps, disks);
+        return new ServerResponse(server, assignedIps, disks, softwares);
     }
 
     public List<ServerResponse> getAllServers() {
@@ -117,6 +124,7 @@ public class ServerService {
         List<Long> serverIds = servers.stream().map(Server::getId).collect(Collectors.toList());
         List<Ip> allIps = ipRepository.findByAssignedTypeAndAssignedIdIn(AssignedType.SERVER, serverIds);
         List<Disk> allDisks = diskRepository.findByServerIdIn(serverIds);
+        List<Software> allSoftwares = softwareRepository.findByServerIdIn(serverIds);
 
         // 🌟 장비 ID를 Key로 하여 소속된 IP 목록(List)을 그룹핑합니다.
         java.util.Map<Long, List<Ip>> ipMap = allIps.stream()
@@ -125,11 +133,16 @@ public class ServerService {
         java.util.Map<Server, List<Disk>> diskMap = allDisks.stream()
                 .collect(Collectors.groupingBy(Disk::getServer));
 
+        java.util.Map<Server, List<Software>> softwareMap = allSoftwares.stream()
+                .collect(Collectors.groupingBy(Software::getServer));
+
         return servers.stream().map(server -> {
             // 해당 서버에 할당된 IP 리스트를 가져와서 DTO에 던짐
             List<Ip> mappedIps = ipMap.getOrDefault(server.getId(), java.util.Collections.emptyList());
             List<Disk> mappedDisks = diskMap.getOrDefault(server, java.util.Collections.emptyList());
-            return new ServerResponse(server, mappedIps, mappedDisks);
+            List<Software> softwares = softwareMap.getOrDefault(server, java.util.Collections.emptyList());
+
+            return new ServerResponse(server, mappedIps, mappedDisks, softwares);
         }).collect(Collectors.toList());
     }
 
@@ -166,6 +179,7 @@ public class ServerService {
             }
         }
         diskService.syncDisksToServer(server.getId(), dto.getDisks());
+        softwareService.syncSoftwaresToServer(server.getId(), dto.getSoftwares());
 
         server.updateServerInfo(
                 dto.getHostName(),

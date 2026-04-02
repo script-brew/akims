@@ -11,6 +11,6 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
 public class ServerSpec {
-    private Integer cpuCore;    // 단위: EA
-    private Integer memoryGb;   // 단위: GB
+    private Double cpuCore; // 단위: EA
+    private Double memoryGb; // 단위: GB
 }

@@ -76,22 +76,24 @@ public class Server extends BaseTimeEntity {
 
     // One server can have many installed software
     @OneToMany(mappedBy = "server", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<Software> installedSoftware = new ArrayList<>();
+    private List<Software> softwares = new ArrayList<>();
 
     private boolean ha; // H/A 여부
 
-    @Lob
-    private String backupInfo;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20, columnDefinition = "VARCHAR(50)")
+    private ServerBackup backupInfo;
 
-    @Lob
-    private String monitoringInfo;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20, columnDefinition = "VARCHAR(50)")
+    private ServerMonitoring monitoringInfo;
 
     // IP relationship will be added later when the IP entity is created.
 
     @Builder
     public Server(Hardware hardware, String hostName, ServerCategory serverCategory, Environment environment,
             ServerType serverType, String platform, String os, String description, ServerSpec spec,
-            boolean ha, String backupInfo, String monitoringInfo) {
+            boolean ha, ServerBackup backupInfo, ServerMonitoring monitoringInfo) {
         this.hardware = hardware;
         this.hostName = hostName;
         this.serverCategory = serverCategory;
@@ -130,12 +132,12 @@ public class Server extends BaseTimeEntity {
     }
 
     public void addSoftware(Software software) {
-        this.installedSoftware.add(software);
+        this.softwares.add(software);
         software.setServer(this);
     }
 
     public void removeSoftware(Software software) {
-        this.installedSoftware.remove(software);
+        this.softwares.remove(software);
         software.setServer(null);
     }
 
@@ -151,7 +153,9 @@ public class Server extends BaseTimeEntity {
 
     public void updateServerInfo(String hostName, ServerCategory serverCategory, Environment environment,
             String os, String description, ServerSpec spec,
-            boolean ha, String backupInfo, String monitoringInfo,
+            boolean ha,
+            ServerBackup backupInfo,
+            ServerMonitoring monitoringInfo,
             Hardware hardware) {
         this.hostName = hostName;
         this.serverCategory = serverCategory;

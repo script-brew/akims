@@ -1,14 +1,17 @@
 package com.akplaza.infra.domain.device.dto;
 
-import java.util.ArrayList;
 import java.util.List;
 
 import com.akplaza.infra.domain.device.entity.Environment;
 import com.akplaza.infra.domain.device.entity.ServerCategory;
+import com.akplaza.infra.domain.device.entity.ServerBackup;
+import com.akplaza.infra.domain.device.entity.ServerMonitoring;
 import com.akplaza.infra.domain.device.entity.ServerType;
 import com.akplaza.infra.domain.network.dto.IpAssignRequest;
+import com.akplaza.infra.domain.software.dto.SoftwareRequest;
 
 import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
@@ -39,19 +42,21 @@ public class ServerCreateRequest {
 
     // ServerSpec 임베디드 매핑용
     @NotNull(message = "CPU Core 수를 입력해주세요.")
-    @Min(value = 1, message = "CPU Core는 1 이상이어야 합니다.")
-    private Integer cpuCore;
+    @DecimalMin(value = "0.1", message = "CPU Core는 0.1 이상이어야 합니다.")
+    private Double cpuCore;
 
     @NotNull(message = "Memory 용량을 입력해주세요.")
-    @Min(value = 1, message = "Memory는 1GB 이상이어야 합니다.")
-    private Integer memoryGb;
+    @DecimalMin(value = "0.5", message = "Memory는 0.5GB 이상이어야 합니다.")
+    private Double memoryGb;
 
     private boolean ha;
-    private String backupInfo;
-    private String monitoringInfo;
+    private ServerBackup backupInfo;
+    private ServerMonitoring monitoringInfo;
 
     private Long hardwareId; // 물리 서버일 경우 매핑할 하드웨어 ID
 
     private List<IpAssignRequest> ips; // 할당할 IP 목록
     private List<DiskRequest> disks;
+    private List<SoftwareRequest> softwares;
+
 }

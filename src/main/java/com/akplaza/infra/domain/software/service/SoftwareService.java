@@ -9,6 +9,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.akplaza.infra.domain.device.entity.Server;
 import com.akplaza.infra.domain.device.repository.ServerRepository;
 import com.akplaza.infra.domain.software.dto.SoftwareCreateRequest;
+import com.akplaza.infra.domain.software.dto.SoftwareRequest;
 import com.akplaza.infra.domain.software.dto.SoftwareResponse;
 import com.akplaza.infra.domain.software.dto.SoftwareUpdateRequest;
 import com.akplaza.infra.domain.software.entity.Software;
@@ -26,6 +27,26 @@ public class SoftwareService {
 
     private final SoftwareRepository softwareRepository;
     private final ServerRepository serverRepository;
+
+    @Transactional
+    public void syncSoftwaresToServer(Long serverId, List<SoftwareRequest> requests) {
+        softwareRepository.deleteByServerId(serverId); // 기존 S/W 삭제 (Repository에 메서드 생성 필요)
+        if (requests == null || requests.isEmpty())
+            return;
+
+        Server server = serverRepository.findById(serverId).orElseThrow();
+        for (SoftwareRequest req : requests) {
+            Software sw = Software.builder()
+                    .name(req.getName())
+                    .version(req.getVersion())
+                    .purpose(req.getPurpose())
+                    .maintenanceInfo(req.getMaintenanceInfo())
+                    .build();
+            sw.setServer(server);
+            softwareRepository.save(sw);
+
+        }
+    }
 
     // ==========================================
     // 1. 소프트웨어 등록 (CREATE)

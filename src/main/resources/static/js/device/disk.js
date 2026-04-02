@@ -111,7 +111,7 @@ function handleEditAction() {
   inputId.value = target.id;
   selServer.value = target.serverId;
   selType.value = target.diskType;
-  inputCapacity.value = target.capacityGb;
+  inputCapacity.value = target.size;
   inputMount.value = target.mountPoint;
 
   serverSelectGroup.style.display = "none"; // 수정시는 서버 변경 불가 (정합성 유지)
@@ -132,7 +132,7 @@ async function saveDisk() {
   const requestData = {
     serverId: parseInt(selServer.value),
     diskType: selType.value,
-    capacityGb: parseInt(inputCapacity.value),
+    size: parseInt(inputCapacity.value),
     mountPoint: inputMount.value.trim(),
   };
 

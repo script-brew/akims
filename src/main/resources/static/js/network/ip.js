@@ -7,7 +7,8 @@ const mapContainer = document.getElementById("ip-map-container");
 const mapTitle = document.getElementById("map-title");
 const ipGrid = document.getElementById("ip-grid");
 
-const inputBlock = document.getElementById("cidr-block");
+const inputPrefix = document.getElementById("cidr-prefix");
+const selectMask = document.getElementById("cidr-mask");
 const inputDesc = document.getElementById("cidr-desc");
 
 const btnOpenModal = document.getElementById("btn-open-modal");
@@ -24,9 +25,11 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 function setupEventListeners() {
   btnOpenModal.addEventListener("click", () => {
-    inputBlock.value = "";
+    // 🌟 모달 열릴 때 초기화
+    inputPrefix.value = "";
+    selectMask.value = "24";
     inputDesc.value = "";
-    ui.openModal("cidr-modal");
+    ui.openModal("cidr-modal", "modal-title", "새 IP 대역 등록"); // 타이틀 ID가 있다면 맞춰주세요
   });
   btnCancel.addEventListener("click", () => ui.closeModal("cidr-modal"));
   btnSave.addEventListener("click", saveCidr);
@@ -86,27 +89,34 @@ window.viewIpMap = async (cidrId, cidrBlock) => {
     mapContainer.style.display = "block";
     ipGrid.innerHTML = ""; // 초기화
 
-    // 3. /24 대역 기준으로 베이스 IP 파싱 (예: "10.10.10.0/24" -> "10.10.10.")
-    const baseIpStr = cidrBlock.split("/")[0];
-    const ipParts = baseIpStr.split(".");
-    const prefix = `${ipParts[0]}.${ipParts[1]}.${ipParts[2]}.`; // "10.10.10."
+    // 3. 🌟 서브넷 파싱 및 호스트 개수 계산
+    const [baseIpStr, maskStr] = cidrBlock.split("/");
+    const mask = parseInt(maskStr) || 24; // 마스크가 없으면 기본값 24 (/24)
 
-    // 4. 0번부터 255번까지 256개의 네모칸(그리드) 생성
+    // IP 개수 계산 로직: 2^(32 - mask)
+    // 예: /24 = 256개, /25 = 128개, /26 = 64개
+    const numIps = Math.pow(2, 32 - mask);
+
+    const ipParts = baseIpStr.split(".");
+    const prefix = `${ipParts[0]}.${ipParts[1]}.${ipParts[2]}.`; // 예: "10.10.10."
+
+    // 시작하는 마지막 자리 숫자 (예: 10.10.10.128/25 이면 128부터 시작)
+    const startOctet = parseInt(ipParts[3]) || 0;
+    const endOctet = startOctet + numIps - 1;
+
+    // 4. 동적으로 계산된 시작점(startOctet)부터 끝점(endOctet)까지 네모칸 생성
     let gridHTML = "";
-    for (let i = 0; i <= 255; i++) {
+    for (let i = startOctet; i <= endOctet; i++) {
       const currentIp = `${prefix}${i}`;
       const assignedInfo = usedIps.find((ip) => ip.ipAddress === currentIp);
 
       let boxClass = "ip-box";
       let tooltipText = currentIp;
 
-      // 🌟 수정됨: assignedInfo가 존재하고, isUsed가 true일 때 색칠!
-      // (Jackson 설정에 따라 used 로 넘어올 수도 있으므로 이중 방어)
       const isIpUsed =
         assignedInfo && (assignedInfo.isUsed || assignedInfo.used);
 
       if (isIpUsed) {
-        // 백엔드에서 주입해준 실제 장비명 (없으면 알 수 없음 처리)
         const targetName = assignedInfo.assignedTargetName || "알 수 없음";
 
         if (assignedInfo.assignedType === "SERVER") {
@@ -119,10 +129,11 @@ window.viewIpMap = async (cidrId, cidrBlock) => {
           boxClass += " ip-gateway";
           tooltipText = `[예약됨/기타] \n(${currentIp})`;
         }
-      } else if (i === 0 || i === 255) {
+      } else if (i === startOctet || i === endOctet) {
+        // 🌟 수정됨: 동적인 네트워크 시작 주소와 브로드캐스트 주소 예약
         boxClass += " ip-gateway";
         tooltipText =
-          i === 0
+          i === startOctet
             ? `네트워크 주소 예약 (${currentIp})`
             : `브로드캐스트 예약 (${currentIp})`;
       }
@@ -141,16 +152,71 @@ window.viewIpMap = async (cidrId, cidrBlock) => {
 
 // --- 등록 / 삭제 로직 ---
 async function saveCidr() {
+  const prefix = inputPrefix.value.trim();
+  const mask = parseInt(selectMask.value);
+
+  // 🚨 방어 로직 1: IP 형식 기본 검증
+  const ipRegex =
+    /^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
+  if (!ipRegex.test(prefix)) {
+    alert("올바른 IPv4 주소 형식이 아닙니다.\n(예: 192.168.10.0)");
+    inputPrefix.focus();
+    return;
+  }
+
+  // 🚨 방어 로직 2: 서브넷 마스크 기반 '네트워크 시작 주소' 정확성 검증 (비트 연산)
+  const ipParts = prefix.split(".").map(Number);
+
+  // 1) 입력받은 IP를 32비트 정수로 변환
+  // 주의: 자바스크립트의 비트 연산자는 32비트 부호 있는 정수를 사용하므로 >>> 연산자로 처리해야 안전합니다.
+  const ipInt =
+    ((ipParts[0] << 24) |
+      (ipParts[1] << 16) |
+      (ipParts[2] << 8) |
+      ipParts[3]) >>>
+    0;
+
+  // 2) 서브넷 마스크 생성 (예: /24 이면 왼쪽부터 24개가 1이고 나머지가 0인 비트)
+  const maskInt = (0xffffffff << (32 - mask)) >>> 0;
+
+  // 3) AND 연산을 통해 진짜 네트워크 주소 산출
+  const networkInt = (ipInt & maskInt) >>> 0;
+
+  // 4) 산출된 네트워크 주소를 다시 문자열 IP로 변환
+  const expectedIp = [
+    (networkInt >>> 24) & 255,
+    (networkInt >>> 16) & 255,
+    (networkInt >>> 8) & 255,
+    networkInt & 255,
+  ].join(".");
+
+  // 5) 사용자가 입력한 IP가 실제 네트워크 시작 주소와 일치하는지 확인
+  if (prefix !== expectedIp) {
+    alert(
+      `입력하신 IP(${prefix})는 /${mask} 대역의 올바른 네트워크 시작 주소가 아닙니다.\n\n` +
+        `/${mask} 대역의 올바른 네트워크 주소는 '${expectedIp}' 입니다.\n` +
+        `IP 주소를 자동으로 수정하시겠습니까?`
+    );
+
+    // 사용자가 잘못 입력했을 경우 올바른 주소로 자동 교정해주는 편의성 제공
+    inputPrefix.value = expectedIp;
+    return; // 저장을 멈추고 사용자가 수정된 값을 확인하게 함
+  }
+
+  // 통과 시 백엔드 규격에 맞게 문자열 병합 (예: "192.168.10.0/24")
   const requestData = {
-    cidrBlock: inputBlock.value.trim(),
+    cidrBlock: `${prefix}/${mask}`,
     description: inputDesc.value.trim(),
   };
+
   try {
     await api.post("/api/v1/ip-cidrs", requestData);
-    alert("대역이 등록되었습니다.");
+    alert("IP 대역이 안전하게 등록되었습니다.");
     ui.closeModal("cidr-modal");
     loadCidrs();
-  } catch (e) {}
+  } catch (e) {
+    // API 에러 처리 (예: 중복된 CIDR)
+  }
 }
 
 async function deleteCidrs() {

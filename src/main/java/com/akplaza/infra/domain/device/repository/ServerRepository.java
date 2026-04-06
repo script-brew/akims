@@ -19,4 +19,10 @@ public interface ServerRepository extends JpaRepository<Server, Long> {
             "LEFT JOIN FETCH s.hardware h " +
             "LEFT JOIN FETCH h.rack r")
     List<Server> findAllWithHardwareAndRack();
+
+    @Query("SELECT s.os, COUNT(s) FROM Server s GROUP BY s.os")
+    java.util.List<Object[]> countByOs();
+
+    @Query("SELECT s.environment, COUNT(s) FROM Server s GROUP BY s.environment")
+    java.util.List<Object[]> countByEnvironment();
 }

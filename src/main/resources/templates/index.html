@@ -2,11 +2,12 @@
 <html lang="ko" xmlns:th="http://www.thymeleaf.org">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>AKIMS - 인프라 자산 관리 솔루션</title>
-
+    <title>AKIMS - 인프라 종합 대시보드</title>
     <link rel="stylesheet" th:href="@{/css/common.css}" />
     <link rel="stylesheet" th:href="@{/css/layout.css}" />
+    <link rel="stylesheet" th:href="@{/css/components.css}" />
+    <link rel="stylesheet" th:href="@{/css/domain/dashboard/index.css}" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   </head>
   <body>
     <header th:replace="~{layout/header :: headerFragment}"></header>
@@ -14,29 +15,71 @@
     <div class="app-body">
       <aside th:replace="~{layout/sidebar :: sidebarFragment}"></aside>
 
-      <main class="app-main">
-        <div class="dashboard-welcome">
-          <h1>AKIMS 메인 대시보드에 오신 것을 환영합니다!</h1>
-          <p>좌측 메뉴를 통해 자산 관리를 시작하세요.</p>
+      <main class="app-main" style="background-color: #f4f6f9">
+        <div class="content-header">
+          <h2>인프라 종합 대시보드</h2>
+          <div class="header-actions">
+            <button
+              class="btn"
+              onclick="location.reload()"
+              style="background-color: #34495e"
+            >
+              🔄 새로고침
+            </button>
+          </div>
+        </div>
 
-          <div
-            style="
-              margin-top: 30px;
-              padding: 20px;
-              background-color: white;
-              border: 1px solid var(--border-color);
-              border-radius: 8px;
-            "
-          >
-            <h3>시스템 현황 요약 (준비 중)</h3>
-            <p style="color: #777; margin-top: 10px">
-              차트 및 통계 데이터가 표시될 영역입니다.
-            </p>
+        <div class="summary-cards">
+          <div class="card">
+            <h3>총 관리 서버 (Server)</h3>
+            <div class="value" id="tot-server">0</div>
+          </div>
+          <div class="card">
+            <h3>네트워크 장비 (Network Eq)</h3>
+            <div class="value" id="tot-network">0</div>
+          </div>
+          <div class="card">
+            <h3>운영 장소 (Location)</h3>
+            <div class="value" id="tot-location">0</div>
+          </div>
+          <div class="card">
+            <h3>할당된 총 랙 (Rack)</h3>
+            <div class="value" id="tot-rack">0</div>
+          </div>
+        </div>
+
+        <div class="charts-area">
+          <div class="chart-container">
+            <h3
+              style="
+                text-align: center;
+                color: #2c3e50;
+                margin-bottom: 20px;
+                font-size: 1.2rem;
+              "
+            >
+              서버 운영 환경 분포
+            </h3>
+            <canvas id="envChart"></canvas>
+          </div>
+          <div class="chart-container">
+            <h3
+              style="
+                text-align: center;
+                color: #2c3e50;
+                margin-bottom: 20px;
+                font-size: 1.2rem;
+              "
+            >
+              운영체제(OS) 실장 현황
+            </h3>
+            <canvas id="osChart"></canvas>
           </div>
         </div>
       </main>
     </div>
 
     <footer th:replace="~{layout/footer :: footerFragment}"></footer>
+    <script type="module" th:src="@{/js/dashboard/index.js}"></script>
   </body>
 </html>

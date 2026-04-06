@@ -25,6 +25,11 @@
           </div>
         </div>
 
+        <div
+          id="ip-search-filter"
+          th:insert="~{components/search-filter :: searchFilterFragment}"
+        ></div>
+
         <table class="data-table">
           <thead>
             <tr>
@@ -44,6 +49,11 @@
             </tr>
           </tbody>
         </table>
+
+        <div
+          id="ip-pagination"
+          th:insert="~{components/pagination :: paginationFragment}"
+        ></div>
 
         <div id="ip-map-container" class="ip-map-container">
           <div class="ip-map-header">

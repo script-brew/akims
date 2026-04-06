@@ -26,6 +26,11 @@
           </div>
         </div>
 
+        <div
+          id="hardware-search-filter"
+          th:insert="~{components/search-filter :: searchFilterFragment}"
+        ></div>
+
         <table class="data-table">
           <thead>
             <tr>
@@ -50,6 +55,11 @@
             </tr>
           </tbody>
         </table>
+
+        <div
+          id="hardware-pagination"
+          th:insert="~{components/pagination :: paginationFragment}"
+        ></div>
       </main>
     </div>
 

@@ -1,7 +1,11 @@
 package com.akplaza.infra.domain.network.controller;
 
 import java.util.List;
+import java.util.Map;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -40,13 +44,25 @@ public class IpController {
         return ResponseEntity.status(HttpStatus.CREATED).body(ipId);
     }
 
-    @Operation(summary = "전체 IP 자산 조회", description = "시스템에 등록된 전체 IP 자산과 그 할당 상태(사용 유무, 점유 장비)를 조회합니다.")
     @GetMapping
-    public ResponseEntity<List<IpResponse>> getAllIps() {
-        log.debug("Ip API: 전체 목록 조회 요청");
-        List<IpResponse> responses = ipService.getAllIps();
-        return ResponseEntity.ok(responses);
+    public ResponseEntity<Page<IpResponse>> getIps(
+            @RequestParam Map<String, String> searchParams, // 🌟 핵심: 프론트가 보내는 모든 필터를 Map으로 흡수
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+
+        PageRequest pageRequest = PageRequest.of(page, size, Sort.by("id").descending());
+
+        return ResponseEntity.ok(ipService.searchIps(searchParams, pageRequest));
     }
+
+    // @Operation(summary = "전체 IP 자산 조회", description = "시스템에 등록된 전체 IP 자산과 그 할당
+    // 상태(사용 유무, 점유 장비)를 조회합니다.")
+    // @GetMapping
+    // public ResponseEntity<List<IpResponse>> getAllIps() {
+    // log.debug("Ip API: 전체 목록 조회 요청");
+    // List<IpResponse> responses = ipService.getAllIps();
+    // return ResponseEntity.ok(responses);
+    // }
 
     @Operation(summary = "특정 장비의 IP 목록 조회", description = "서버 또는 네트워크 장비에 할당된 IP 목록을 조회합니다.")
     @GetMapping("/target")

@@ -1,6 +1,9 @@
 import { api } from "../common/api.js";
 import { ui } from "../common/ui.js";
 
+import { SearchFilter } from "../common/search-filter.js";
+import { Pagination } from "../common/pagination.js";
+
 // --- DOM Elements ---
 const tableBody = document.getElementById("hardware-table-body");
 const modalTitle = document.getElementById("modal-title");
@@ -30,10 +33,36 @@ const btnDelete = document.getElementById("btn-delete");
 let hardwareList = [];
 let rackList = [];
 
+let searchFilter, pagination;
+let currentPage = 0;
+
 // --- Init ---
 document.addEventListener("DOMContentLoaded", async () => {
   await loadRacks(); // 랙 목록을 먼저 불러와 실장 위치 콤보박스 세팅
   await loadHardwares(); // 하드웨어 목록 세팅
+
+  const filterOptions = [
+    { value: "model", label: "모델명" },
+    { value: "serialNo", label: "시리얼 번호" },
+  ];
+
+  searchFilter = new SearchFilter(
+    document.getElementById("hardware-search-filter"),
+    filterOptions,
+    () => {
+      currentPage = 0;
+      loadHardwares();
+    }
+  );
+
+  pagination = new Pagination(
+    document.querySelector("#hardware-pagination .pagination-container"),
+    (pageNo) => {
+      currentPage = pageNo;
+      loadHardwares();
+    }
+  );
+
   setupEventListeners();
 });
 
@@ -56,9 +85,14 @@ async function loadRacks() {
 
 async function loadHardwares() {
   try {
-    const data = await api.get("/api/v1/hardwares");
+    const params = searchFilter.getQueryParams();
+    const responseData = await api.get(
+      `/api/v1/hardwares?page=${currentPage}&size=20${params}`
+    );
+
     hardwareList = data.filter((hw) => hw.model !== "shelf");
     renderTable();
+    pagination.render(responseData.totalPages, responseData.number);
   } catch (error) {
     tableBody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:red;">데이터 로드 실패</td></tr>`;
   }

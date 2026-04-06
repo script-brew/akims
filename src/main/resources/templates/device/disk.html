@@ -22,6 +22,11 @@
             <button id="btn-delete" class="btn danger">선택 삭제</button>
           </div>
         </div>
+        <div
+          id="disk-search-filter"
+          th:insert="~{components/search-filter :: searchFilterFragment}"
+        ></div>
+
         <table class="data-table">
           <thead>
             <tr>
@@ -34,6 +39,10 @@
           </thead>
           <tbody id="disk-table-body"></tbody>
         </table>
+        <div
+          id="disk-pagination"
+          th:insert="~{components/pagination :: paginationFragment}"
+        ></div>
       </main>
     </div>
     <footer th:replace="~{layout/footer :: footerFragment}"></footer>

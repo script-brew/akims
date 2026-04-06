@@ -1,8 +1,12 @@
 package com.akplaza.infra.domain.network.service;
 
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,7 +21,10 @@ import com.akplaza.infra.domain.network.entity.IpCidr;
 import com.akplaza.infra.domain.network.repository.IpCidrRepository;
 import com.akplaza.infra.domain.network.repository.IpRepository;
 import com.akplaza.infra.domain.device.repository.ServerRepository;
+import com.akplaza.infra.domain.hardware.dto.HardwareResponse;
+import com.akplaza.infra.domain.hardware.entity.Hardware;
 import com.akplaza.infra.domain.device.repository.NetworkDeviceRepository;
+import com.akplaza.infra.global.common.repository.DynamicSearchSpec;
 import com.akplaza.infra.global.error.exception.DuplicateResourceException;
 import com.akplaza.infra.global.error.exception.ResourceInUseException;
 import com.akplaza.infra.global.error.exception.ResourceNotFoundException;
@@ -159,6 +166,19 @@ public class IpService {
 
         log.info("신규 IP 자산 등록 완료 - ID: {}", ip.getId());
         return ip.getId();
+    }
+
+    @Transactional(readOnly = true)
+    // 🌟 수정됨: 개별 파라미터 대신 Map<String, String> 을 통째로 받습니다.
+    public Page<IpResponse> searchIps(Map<String, String> searchParams, Pageable pageable) {
+
+        // 1. Map을 던져주면 공통 유틸이 동적 WHERE 절(Specification)을 만들어줍니다.
+        Specification<Ip> spec = DynamicSearchSpec.searchConditions(searchParams);
+
+        // 2. 만들어진 조건과 페이징 정보를 Repository에 넘깁니다. (메서드는 기본 내장된 findAll 사용)
+        Page<Ip> ipPage = ipRepository.findAll(spec, pageable);
+
+        return ipPage.map(IpResponse::new);
     }
 
     // 전체 IP 목록 조회 (화면의 IP 자산 관리용)

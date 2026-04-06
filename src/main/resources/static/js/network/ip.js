@@ -1,6 +1,9 @@
 import { api } from "../common/api.js";
 import { ui } from "../common/ui.js";
 
+import { SearchFilter } from "../common/search-filter.js";
+import { Pagination } from "../common/pagination.js";
+
 // --- DOM Elements ---
 const tableBody = document.getElementById("cidr-table-body");
 const mapContainer = document.getElementById("ip-map-container");
@@ -18,9 +21,34 @@ const btnDeleteCidr = document.getElementById("btn-delete-cidr");
 
 let cidrList = [];
 
+let searchFilter, pagination;
+let currentPage = 0;
+
 document.addEventListener("DOMContentLoaded", async () => {
   await loadCidrs();
   setupEventListeners();
+
+  const filterOptions = [
+    { value: "cidrBlock", label: "IP 대역 (CIDR)" },
+    { value: "description", label: "설명/용도" },
+  ];
+
+  searchFilter = new SearchFilter(
+    document.getElementById("ip-search-filter"),
+    filterOptions,
+    () => {
+      currentPage = 0;
+      loadCidrs();
+    }
+  );
+
+  pagination = new Pagination(
+    document.querySelector("#ip-pagination .pagination-container"),
+    (pageNo) => {
+      currentPage = pageNo;
+      loadCidrs();
+    }
+  );
 });
 
 function setupEventListeners() {
@@ -40,8 +68,13 @@ function setupEventListeners() {
 
 async function loadCidrs() {
   try {
-    cidrList = await api.get("/api/v1/ip-cidrs");
+    const params = searchFilter.getQueryParams();
+    const responseData = await api.get(
+      `/api/v1/ip-cidrs?page=${currentPage}&size=20${params}`
+    );
+    cidrList = responseData.content || [];
     renderTable();
+    pagination.render(responseData.totalPages, responseData.number);
   } catch (e) {
     tableBody.innerHTML = `<tr><td colspan="4" style="text-align:center;color:red;">데이터 로드 실패</td></tr>`;
   }

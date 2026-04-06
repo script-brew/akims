@@ -4,11 +4,12 @@ import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 
 import com.akplaza.infra.domain.network.entity.AssignedType;
 import com.akplaza.infra.domain.network.entity.Ip;
 
-public interface IpRepository extends JpaRepository<Ip, Long> {
+public interface IpRepository extends JpaRepository<Ip, Long>, JpaSpecificationExecutor<Ip> {
 
     // IP 주소 자체로 단건 조회 (예: 192.168.1.100)
     Optional<Ip> findByIpAddress(String ipAddress);

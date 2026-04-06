@@ -26,6 +26,11 @@
           </div>
         </div>
 
+        <div
+          id="server-search-filter"
+          th:insert="~{components/search-filter :: searchFilterFragment}"
+        ></div>
+
         <table class="data-table">
           <thead>
             <tr>
@@ -50,6 +55,12 @@
             </tr>
           </tbody>
         </table>
+
+        <div
+          id="server-pagination"
+          th:insert="~{components/pagination :: paginationFragment}"
+        ></div>
+
         <div
           id="server-detail-container"
           style="

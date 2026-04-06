@@ -3,12 +3,13 @@ package com.akplaza.infra.domain.hardware.repository;
 import java.util.List;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import com.akplaza.infra.domain.hardware.entity.Hardware;
 
-public interface HardwareRepository extends JpaRepository<Hardware, Long> {
+public interface HardwareRepository extends JpaRepository<Hardware, Long>, JpaSpecificationExecutor<Hardware> {
 
         boolean existsBySerialNo(String serialNo);
 

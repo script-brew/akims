@@ -1,6 +1,9 @@
 import { api } from "../common/api.js";
 import { ui } from "../common/ui.js";
 
+import { SearchFilter } from "../common/search-filter.js";
+import { Pagination } from "../common/pagination.js";
+
 // --- DOM Elements ---
 const tableBody = document.getElementById("disk-table-body");
 const inputId = document.getElementById("disk-id");
@@ -20,11 +23,38 @@ const btnSave = document.getElementById("btn-save");
 let diskList = [];
 let serverList = [];
 
+let searchFilter, pagination;
+let currentPage = 0;
+
 document.addEventListener("DOMContentLoaded", async () => {
   await loadServers(); // 서버 목록 먼저 로드
   await loadDisks();
   setupEventListeners();
+
+  const filterOptions = [
+    { value: "diskType", label: "디스크 타입 (SSD/HDD 등)" },
+    { value: "mountPoint", label: "마운트 경로" },
+  ];
+
+  searchFilter = new SearchFilter(
+    document.getElementById("disk-search-filter"),
+    [filterOptions],
+    () => {
+      currentPage = 0;
+      loadDisks();
+    }
+  );
+
+  pagination = new Pagination(
+    document.querySelector("#disk-pagination .pagination-container"),
+    (pageNo) => {
+      currentPage = pageNo;
+      loadDisks();
+    }
+  );
 });
+
+// --- Event Listeners ---
 
 function setupEventListeners() {
   btnOpenModal.addEventListener("click", openCreateModal);
@@ -51,8 +81,13 @@ async function loadServers() {
 
 async function loadDisks() {
   try {
-    diskList = await api.get("/api/v1/disks");
+    const params = searchFilter.getQueryParams();
+    const responseData = await api.get(
+      `/api/v1/disks?page=${currentPage}&size=20${params}`
+    );
+    diskList = responseData.content || [];
     renderTable();
+    pagination.render(responseData.totalPages, responseData.number);
   } catch (e) {
     tableBody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:red;">데이터 로드 실패</td></tr>`;
   }

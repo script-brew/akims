@@ -4,11 +4,13 @@ import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 
 import com.akplaza.infra.domain.device.entity.NetworkDevice;
 
-public interface NetworkDeviceRepository extends JpaRepository<NetworkDevice, Long> {
+public interface NetworkDeviceRepository
+        extends JpaRepository<NetworkDevice, Long>, JpaSpecificationExecutor<NetworkDevice> {
 
     // 장비명(HostName) 중복 검사 및 단건 조회
     boolean existsByName(String name);

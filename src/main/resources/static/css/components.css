@@ -118,3 +118,115 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+/* ==========================================
+   다중 검색 필터 컴포넌트 (Search Filter)
+   ========================================== */
+.filter-container {
+  background: #fff;
+  padding: 15px;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  margin-bottom: 20px;
+}
+.filter-controls {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+.filter-select {
+  width: 150px;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  outline: none;
+  font-weight: bold;
+}
+.filter-input-wrapper {
+  flex: 1;
+  position: relative;
+}
+.filter-icon {
+  position: absolute;
+  left: 15px;
+  top: 10px;
+  color: #95a5a6;
+}
+.filter-input {
+  width: 100%;
+  padding: 10px 10px 10px 40px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  outline: none;
+}
+.filter-input:focus {
+  border-color: var(--primary-color);
+}
+.active-filters-area {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 15px;
+  min-height: 28px;
+  align-items: center;
+}
+.empty-filter-text {
+  color: #95a5a6;
+  font-size: 0.9rem;
+}
+.filter-chip {
+  display: inline-flex;
+  align-items: center;
+  background: #eaf2f8;
+  color: #2980b9;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  border: 1px solid #b3d4fc;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+.filter-chip strong {
+  margin-right: 6px;
+  color: #2c3e50;
+}
+.filter-chip-close {
+  margin-left: 10px;
+  cursor: pointer;
+  color: #e74c3c;
+  font-weight: bold;
+  font-size: 1rem;
+}
+
+/* ==========================================
+   페이징 컴포넌트 (Pagination)
+   ========================================== */
+.pagination-container {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 25px;
+}
+.page-btn {
+  background-color: #fff;
+  color: #333;
+  border: 1px solid #ddd;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 0.9rem;
+}
+.page-btn:hover:not(:disabled) {
+  background-color: #f1f2f6;
+}
+.page-btn.active {
+  background-color: #3498db;
+  color: white;
+  border-color: #3498db;
+}
+.page-btn:disabled {
+  background-color: #f8f9fa;
+  color: #bdc3c7;
+  cursor: not-allowed;
+  border-color: #ecf0f1;
+}

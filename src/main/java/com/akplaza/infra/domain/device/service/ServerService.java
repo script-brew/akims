@@ -2,6 +2,7 @@ package com.akplaza.infra.domain.device.service;
 
 import java.util.List;
 import java.util.stream.Collectors;
+import java.util.Map;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -15,6 +16,7 @@ import com.akplaza.infra.domain.device.entity.ServerSpec;
 import com.akplaza.infra.domain.device.entity.ServerType;
 import com.akplaza.infra.domain.device.repository.ServerRepository;
 import com.akplaza.infra.domain.device.repository.DiskRepository;
+import com.akplaza.infra.domain.hardware.dto.HardwareResponse;
 import com.akplaza.infra.domain.hardware.entity.Hardware;
 import com.akplaza.infra.domain.hardware.repository.HardwareRepository;
 import com.akplaza.infra.domain.network.dto.IpAssignRequest;
@@ -27,6 +29,12 @@ import com.akplaza.infra.domain.software.repository.SoftwareRepository;
 import com.akplaza.infra.domain.software.service.SoftwareService;
 import com.akplaza.infra.global.error.exception.DuplicateResourceException;
 import com.akplaza.infra.global.error.exception.ResourceNotFoundException;
+import com.akplaza.infra.global.common.repository.DynamicSearchSpec;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -111,6 +119,40 @@ public class ServerService {
         List<Software> softwares = softwareRepository.findByServerId(server.getId());
 
         return new ServerResponse(server, assignedIps, disks, softwares);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<ServerResponse> searchServers(Map<String, String> searchParams, Pageable pageable) {
+
+        // 1. 공통 유틸을 통해 동적 WHERE 절(Specification) 생성
+        Specification<Server> spec = DynamicSearchSpec.searchConditions(searchParams);
+
+        // 2. Repository의 findAll(spec, pageable) 호출하여 기본 서버 목록 조회
+        Page<Server> serverPage = serverRepository.findAll(spec, pageable);
+        List<Server> servers = serverPage.getContent();
+
+        // 결과가 없으면 빈 페이지 반환
+        if (servers.isEmpty()) {
+            return new PageImpl<>(java.util.Collections.emptyList(), pageable, serverPage.getTotalElements());
+        }
+
+        // 3. 🚨 N+1 방어 로직: 조회된 서버 ID들만 추출
+        List<Long> serverIds = servers.stream().map(Server::getId).collect(Collectors.toList());
+
+        // 4. IP 목록 한 번에 조회 후 서버 ID를 키값으로 그룹핑 (Map 생성)
+        List<Ip> allIps = ipRepository.findByAssignedTypeAndAssignedIdIn(AssignedType.SERVER, serverIds);
+        Map<Long, List<Ip>> ipMap = allIps.stream().collect(Collectors.groupingBy(Ip::getAssignedId));
+
+        // 5. 🌟 DTO로 안전하게 조립 (데이터 중복 증식 방지)
+        List<ServerResponse> responseList = servers.stream().map(server -> {
+            List<Ip> mappedIps = ipMap.getOrDefault(server.getId(), java.util.Collections.emptyList());
+
+            // ServerResponse 생성자에 엔티티의 연관 객체들을 넘겨주면, DTO 클래스 안에서 필요한 것만 예쁘게 파싱함
+            return new ServerResponse(server, mappedIps, server.getDisks(), server.getSoftwares());
+        }).collect(Collectors.toList());
+
+        // 6. 최종 Page 객체 반환
+        return new PageImpl<>(responseList, pageable, serverPage.getTotalElements());
     }
 
     public List<ServerResponse> getAllServers() {

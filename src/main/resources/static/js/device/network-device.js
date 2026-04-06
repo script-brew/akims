@@ -1,6 +1,9 @@
 import { api } from "../common/api.js";
 import { ui } from "../common/ui.js";
 
+import { SearchFilter } from "../common/search-filter.js";
+import { Pagination } from "../common/pagination.js";
+
 // --- DOM Elements ---
 const tableBody = document.getElementById("nd-table-body");
 
@@ -26,12 +29,41 @@ let deviceList = [];
 let hardwareList = [];
 let cidrList = [];
 
+let searchFilter, pagination;
+let currentPage = 0;
+
 document.addEventListener("DOMContentLoaded", async () => {
   await loadHardwares();
   await loadCidrs();
   await loadNetworkDevices();
-  setupEventListeners();
+
+  const filterOptions = [
+    { value: "name", label: "서버명 (Host)" },
+    { value: "os", label: "운영체제 (OS)" },
+    { value: "ipAddress", label: "관리 IP" },
+  ];
+
+  searchFilter = new SearchFilter(
+    document.getElementById("network-search-filter"),
+    [filterOptions],
+    () => {
+      currentPage = 0;
+      loadNetworkDevices();
+    }
+  );
+
+  pagination = new Pagination(
+    document.querySelector("#network-pagination .pagination-container"),
+    (pageNo) => {
+      currentPage = pageNo;
+      loadNetworkDevices();
+
+      setupEventListeners();
+    }
+  );
 });
+
+// --- Event Listeners ---
 
 function setupEventListeners() {
   btnOpenModal.addEventListener("click", openCreateModal);
@@ -87,8 +119,13 @@ async function loadCidrs() {
 
 async function loadNetworkDevices() {
   try {
-    deviceList = await api.get("/api/v1/network-devices");
+    const params = searchFilter.getQueryParams();
+    const responseData = await api.get(
+      `/api/v1/network-devices?page=${currentPage}&size=20${params}`
+    );
+    deviceList = responseData.content || [];
     renderTable();
+    pagination.render(responseData.totalPages, responseData.number);
   } catch (e) {
     tableBody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:red;">데이터 로드 실패</td></tr>`;
   }

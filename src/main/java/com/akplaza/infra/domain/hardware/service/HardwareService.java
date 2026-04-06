@@ -2,9 +2,12 @@ package com.akplaza.infra.domain.hardware.service;
 
 import java.util.List;
 import java.util.stream.Collectors;
+import java.util.Map;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 import com.akplaza.infra.domain.device.repository.NetworkDeviceRepository;
 import com.akplaza.infra.domain.device.repository.ServerRepository;
@@ -18,9 +21,12 @@ import com.akplaza.infra.domain.space.repository.RackRepository;
 import com.akplaza.infra.global.error.exception.DuplicateResourceException;
 import com.akplaza.infra.global.error.exception.ResourceInUseException;
 import com.akplaza.infra.global.error.exception.ResourceNotFoundException;
+import com.akplaza.infra.global.common.repository.DynamicSearchSpec;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+
+import org.springframework.data.jpa.domain.Specification;
 
 @Slf4j
 @Service
@@ -110,6 +116,19 @@ public class HardwareService {
         Hardware hardware = hardwareRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("하드웨어를 찾을 수 없습니다. ID: " + id));
         return new HardwareResponse(hardware);
+    }
+
+    @Transactional(readOnly = true)
+    // 🌟 수정됨: 개별 파라미터 대신 Map<String, String> 을 통째로 받습니다.
+    public Page<HardwareResponse> searchHardwares(Map<String, String> searchParams, Pageable pageable) {
+
+        // 1. Map을 던져주면 공통 유틸이 동적 WHERE 절(Specification)을 만들어줍니다.
+        Specification<Hardware> spec = DynamicSearchSpec.searchConditions(searchParams);
+
+        // 2. 만들어진 조건과 페이징 정보를 Repository에 넘깁니다. (메서드는 기본 내장된 findAll 사용)
+        Page<Hardware> hardwarePage = hardwareRepository.findAll(spec, pageable);
+
+        return hardwarePage.map(HardwareResponse::new);
     }
 
     public List<HardwareResponse> getAllHardwares() {

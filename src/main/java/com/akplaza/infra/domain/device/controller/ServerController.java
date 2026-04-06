@@ -1,7 +1,9 @@
 package com.akplaza.infra.domain.device.controller;
 
 import java.util.List;
+import java.util.Map;
 
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -11,7 +13,12 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
+import org.springframework.web.bind.annotation.RequestParam;
 
 import com.akplaza.infra.domain.device.dto.ServerCreateRequest;
 import com.akplaza.infra.domain.device.dto.ServerResponse;
@@ -49,13 +56,23 @@ public class ServerController {
         return ResponseEntity.ok(response);
     }
 
-    @Operation(summary = "서버 전체 조회", description = "시스템에 등록된 전체 서버 목록을 조회합니다.")
     @GetMapping
-    public ResponseEntity<List<ServerResponse>> getAllServers() {
-        log.debug("Server API: 전체 목록 조회 요청");
-        List<ServerResponse> responses = serverService.getAllServers();
-        return ResponseEntity.ok(responses);
+    public ResponseEntity<Page<ServerResponse>> getServers(
+            @RequestParam Map<String, String> searchParams,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+
+        PageRequest pageRequest = PageRequest.of(page, size, Sort.by("id").descending());
+        return ResponseEntity.ok(serverService.searchServers(searchParams, pageRequest));
     }
+
+    // @Operation(summary = "서버 전체 조회", description = "시스템에 등록된 전체 서버 목록을 조회합니다.")
+    // @GetMapping
+    // public ResponseEntity<List<ServerResponse>> getAllServers() {
+    // log.debug("Server API: 전체 목록 조회 요청");
+    // List<ServerResponse> responses = serverService.getAllServers();
+    // return ResponseEntity.ok(responses);
+    // }
 
     @Operation(summary = "서버 정보 수정", description = "특정 서버의 정보(스펙 업그레이드, OS 변경 등)를 업데이트합니다.")
     @PutMapping("/{id}")

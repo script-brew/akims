@@ -1,6 +1,7 @@
 package com.akplaza.infra.domain.device.controller;
 
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -11,12 +12,17 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 
 import com.akplaza.infra.domain.device.dto.DiskCreateRequest;
 import com.akplaza.infra.domain.device.dto.DiskResponse;
 import com.akplaza.infra.domain.device.dto.DiskUpdateRequest;
 import com.akplaza.infra.domain.device.service.DiskService;
+import com.akplaza.infra.domain.hardware.dto.HardwareResponse;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -49,13 +55,24 @@ public class DiskController {
         return ResponseEntity.ok(response);
     }
 
-    @Operation(summary = "디스크 전체 조회", description = "시스템에 등록된 전체 디스크 목록을 조회합니다.")
     @GetMapping
-    public ResponseEntity<List<DiskResponse>> getAllDisks() {
-        log.debug("Server API: 전체 목록 조회 요청");
-        List<DiskResponse> responses = diskService.getAllDisks();
-        return ResponseEntity.ok(responses);
+    public ResponseEntity<Page<DiskResponse>> getDisks(
+            @RequestParam Map<String, String> searchParams, // 🌟 핵심: 프론트가 보내는 모든 필터를 Map으로 흡수
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+
+        PageRequest pageRequest = PageRequest.of(page, size, Sort.by("id").descending());
+
+        return ResponseEntity.ok(diskService.searchDisks(searchParams, pageRequest));
     }
+
+    // @Operation(summary = "디스크 전체 조회", description = "시스템에 등록된 전체 디스크 목록을 조회합니다.")
+    // @GetMapping
+    // public ResponseEntity<List<DiskResponse>> getAllDisks() {
+    // log.debug("Server API: 전체 목록 조회 요청");
+    // List<DiskResponse> responses = diskService.getAllDisks();
+    // return ResponseEntity.ok(responses);
+    // }
 
     @Operation(summary = "특정 서버의 디스크 목록 조회", description = "서버 상세 화면에서 해당 서버에 장착된 모든 디스크 목록을 조회합니다.")
     @GetMapping("/server/{serverId}")

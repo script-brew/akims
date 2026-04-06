@@ -1,5 +1,7 @@
 import { api } from "../common/api.js";
 import { ui } from "../common/ui.js";
+import { SearchFilter } from "../common/search-filter.js";
+import { Pagination } from "../common/pagination.js";
 
 // --- DOM Elements ---
 const tableBody = document.getElementById("server-table-body");
@@ -32,6 +34,7 @@ const dbmsContainer = document.getElementById("dbms-list-container");
 const detailContainer = document.getElementById("server-detail-container");
 const detailTitle = document.getElementById("detail-title");
 const detailContent = document.getElementById("server-detail-content");
+
 // Buttons
 const btnOpenModal = document.getElementById("btn-open-modal");
 const btnEdit = document.getElementById("btn-edit");
@@ -43,15 +46,50 @@ const btnAddDisk = document.getElementById("btn-add-disk");
 const btnAddSw = document.getElementById("btn-add-sw");
 const btnCloseDetail = document.getElementById("btn-close-detail");
 
+const paginationArea = document.getElementById("pagination-area");
+
 // --- State ---
 let serverList = [];
 let hardwareList = [];
 let cidrList = [];
 
+// 페이징 상태 관리
+let currentPage = 0;
+let activeFilters = [];
+let searchFilter; // 🌟 필터 인스턴스 변수
+let pagination; // 🌟 페이징 인스턴스 변수
+
 // --- Init ---
 document.addEventListener("DOMContentLoaded", async () => {
+  // 🌟 서버 화면에 맞는 옵션을 주입하여 검색 필터 초기화!
+  const filterOptions = [
+    { value: "hostName", label: "서버명 (Host)" },
+    { value: "os", label: "운영체제 (OS)" },
+    { value: "description", label: "설명/비고" },
+  ];
+
+  // (컨테이너 요소, 주입할 옵션배열, 검색 실행 콜백함수)
+  searchFilter = new SearchFilter(
+    document.getElementById("server-search-filter"),
+    filterOptions,
+    () => {
+      currentPage = 0; // 검색이 발생하면 1페이지로 리셋
+      loadServers();
+    }
+  );
+
+  // 🌟 페이징 인스턴스 초기화
+  pagination = new Pagination(
+    document.querySelector("#server-pagination .pagination-container"),
+    (pageNo) => {
+      // 버튼이 클릭되면 이 콜백이 실행됨!
+      currentPage = pageNo;
+      loadServers();
+    }
+  );
+
   await loadHardwares(); // 하드웨어 매핑용
-  await loadCidrs(); // 🌟 IP 대역 로드
+  // await loadCidrs(); // 🌟 IP 대역 로드
   await loadServers();
   setupEventListeners();
 });
@@ -95,11 +133,46 @@ async function loadHardwares() {
 
 async function loadServers() {
   try {
-    serverList = await api.get("/api/v1/servers");
+    // 🌟 searchFilter 인스턴스에게 현재 쌓인 파라미터 문자열을 달라고 요청!
+    const filterParams = searchFilter.getQueryParams();
+    const url = `/api/v1/servers?page=${currentPage}&size=20${filterParams}`;
+
+    const responseData = await api.get(url);
+    serverList = responseData.content || [];
+
     renderTable();
+    pagination.render(responseData.totalPages, responseData.number);
   } catch (error) {
     tableBody.innerHTML = `<tr><td colspan="8" style="text-align:center;color:red;">데이터 로드 실패</td></tr>`;
   }
+}
+
+// 🌟 2. 개별 필터 'X' 버튼 삭제 로직 (전역 함수로 등록하여 HTML 인라인에서 호출)
+window.removeFilter = (type) => {
+  activeFilters = activeFilters.filter((f) => f.type !== type);
+  currentPage = 0;
+  renderFilterChips();
+  loadServers();
+};
+
+// 🌟 3. 필터 태그(Chips) 시각화 렌더링
+function renderFilterChips() {
+  if (activeFilters.length === 0) {
+    filtersContainer.innerHTML =
+      '<span style="color: #95a5a6; font-size: 0.9rem;">적용된 필터가 없습니다.</span>';
+    return;
+  }
+
+  filtersContainer.innerHTML = activeFilters
+    .map(
+      (f) => `
+        <span style="display: inline-flex; align-items: center; background: #eaf2f8; color: #2980b9; padding: 6px 14px; border-radius: 20px; font-size: 0.85rem; border: 1px solid #b3d4fc; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+            <strong style="margin-right: 6px; color:#2c3e50;">${f.label}:</strong> ${f.value}
+            <span onclick="window.removeFilter('${f.type}')" style="margin-left: 10px; cursor: pointer; color: #e74c3c; font-weight: bold; font-size: 1rem;" title="이 필터 지우기">✖</span>
+        </span>
+    `
+    )
+    .join("");
 }
 
 // --- Render Logic ---
@@ -276,6 +349,7 @@ function setupEventListeners() {
   btnCloseDetail.addEventListener("click", () => {
     detailContainer.style.display = "none";
   });
+
   ui.setupCheckAll("check-all", "srv-checkbox-item");
 
   // 🌟 15년 차의 디테일: 서버 타입에 따른 동적 UI 변경

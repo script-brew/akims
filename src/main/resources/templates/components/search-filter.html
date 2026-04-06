@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+  <body>
+    <div th:fragment="searchFilterFragment" class="filter-container">
+      <div class="filter-controls">
+        <select class="filter-select sf-select"></select>
+
+        <div class="filter-input-wrapper">
+          <span class="filter-icon">🔍</span>
+          <input
+            type="text"
+            class="filter-input sf-input"
+            placeholder="검색어를 입력하고 '엔터' 또는 '필터 추가'를 누르세요..."
+          />
+        </div>
+
+        <button
+          class="btn sf-btn-add"
+          style="background-color: #2c3e50; padding: 10px 20px"
+        >
+          필터 추가
+        </button>
+        <button class="btn cancel sf-btn-reset" style="padding: 10px 20px">
+          전체 초기화
+        </button>
+      </div>
+
+      <div class="active-filters-area sf-chips-container">
+        <span class="empty-filter-text">적용된 필터가 없습니다.</span>
+      </div>
+    </div>
+  </body>
+</html>

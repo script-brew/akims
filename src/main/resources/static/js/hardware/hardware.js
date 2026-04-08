@@ -29,6 +29,10 @@ const btnSave = document.getElementById("btn-save");
 const btnEdit = document.getElementById("btn-edit");
 const btnDelete = document.getElementById("btn-delete");
 
+const btnDownloadExcel = document.getElementById("btn-download-excel");
+const btnUploadExcel = document.getElementById("btn-upload-excel");
+const excelFileInput = document.getElementById("excel-file-input");
+
 // --- State ---
 let hardwareList = [];
 let rackList = [];
@@ -183,6 +187,52 @@ function setupEventListeners() {
       selPowerLine.value = "";
     } else {
       selPowerLine.value = "A";
+    }
+  });
+
+  btnDownloadExcel.addEventListener("click", () => {
+    // 현재 검색된 필터 조건을 그대로 URL 파라미터로 가져옴
+    const filterParams = searchFilter.getQueryParams();
+    // 브라우저의 기본 다운로드 동작을 유도하기 위해 window.location.href 사용
+    window.location.href = `/api/v1/hardwares/excel/download?${filterParams.replace(
+      /^&/,
+      ""
+    )}`;
+  });
+
+  // 엑셀 업로드 버튼 클릭 시 숨겨진 file input 클릭
+  btnUploadExcel.addEventListener("click", () => {
+    excelFileInput.click();
+  });
+
+  // 파일이 선택되면 즉시 서버로 업로드 (Multipart form-data)
+  excelFileInput.addEventListener("change", async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+      // api.js 모듈이 JSON 전송 전용일 경우, 아래와 같이 fetch를 직접 호출
+      const response = await fetch("/api/v1/hardwares/excel/upload", {
+        method: "POST",
+        body: formData,
+        // 주의: FormData 사용 시 Content-Type 헤더를 명시적으로 설정하지 않아야 브라우저가 boundary를 자동 생성합니다.
+      });
+      const result = await response.json();
+
+      if (response.ok) {
+        alert(response.message);
+        loadHardwares(); // 업로드 성공 후 목록 새로고침
+      } else {
+        alert("엑셀 업로드 실패:\n" + response.message);
+      }
+    } catch (error) {
+      console.error("엑셀 업로드 에러", error);
+      alert("오류 발생: " + error.message);
+    } finally {
+      excelFileInput.value = ""; // 초기화하여 같은 파일 다시 선택 가능하게 함
     }
   });
 }

@@ -172,7 +172,7 @@ public class ServerController {
     // ==========================================
     @Operation(summary = "서버 대량 업로드")
     @PostMapping("/excel/upload")
-    public ResponseEntity<String> uploadExcel(@RequestParam("file") MultipartFile file) {
+    public ResponseEntity<Map<String, String>> uploadExcel(@RequestParam("file") MultipartFile file) {
         try {
             List<List<String>> excelData = ExcelUtil.readExcel(file);
             int successCount = 0;
@@ -295,9 +295,9 @@ public class ServerController {
                     // 특정 행 에러 시 무시하고 다음 행 진행
                 }
             }
-            return ResponseEntity.ok("총 " + successCount + "건의 서버가 엑셀로 일괄 등록되었습니다.");
+            return ResponseEntity.ok(Map.of("message", "총 " + successCount + "건의 서버가 엑셀로 일괄 등록되었습니다."));
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("엑셀 업로드 실패: " + e.getMessage());
+            return ResponseEntity.status(500).body(Map.of("message", "엑셀 처리 실패: " + e.getMessage()));
         }
     }
 

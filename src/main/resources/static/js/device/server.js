@@ -388,17 +388,17 @@ function setupEventListeners() {
         body: formData,
         // 주의: FormData 사용 시 Content-Type 헤더를 명시적으로 설정하지 않아야 브라우저가 boundary를 자동 생성합니다.
       });
-      const result = await response.text();
+      const result = await response.json();
 
       if (response.ok) {
-        alert("엑셀 데이터가 성공적으로 반영되었습니다.\n" + result);
+        alert("엑셀 데이터가 성공적으로 반영되었습니다.\n" + response.message);
         loadServers(); // 업로드 성공 후 목록 새로고침
       } else {
-        alert("엑셀 업로드 실패:\n" + result);
+        alert("엑셀 업로드 실패:\n" + response.message);
       }
     } catch (error) {
       console.error("엑셀 업로드 에러", error);
-      alert("엑셀 업로드 중 오류가 발생했습니다.");
+      alert("오류 발생: " + error.message);
     } finally {
       excelFileInput.value = ""; // 초기화하여 같은 파일 다시 선택 가능하게 함
     }

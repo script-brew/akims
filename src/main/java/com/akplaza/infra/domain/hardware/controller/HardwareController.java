@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
@@ -20,12 +19,14 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
-import com.akplaza.infra.domain.device.dto.ServerResponse;
 import com.akplaza.infra.domain.hardware.dto.HardwareCreateRequest;
 import com.akplaza.infra.domain.hardware.dto.HardwareResponse;
 import com.akplaza.infra.domain.hardware.dto.HardwareUpdateRequest;
+import com.akplaza.infra.domain.hardware.entity.EquipmentType;
 import com.akplaza.infra.domain.hardware.service.HardwareService;
-import com.akplaza.infra.domain.network.dto.IpAssignRequest;
+import com.akplaza.infra.domain.hardware.repository.HardwareRepository;
+import com.akplaza.infra.domain.space.entity.Rack;
+import com.akplaza.infra.domain.space.repository.RackRepository;
 import com.akplaza.infra.global.common.util.ExcelUtil;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -46,6 +47,7 @@ import lombok.extern.slf4j.Slf4j;
 public class HardwareController {
 
     private final HardwareService hardwareService;
+    private final RackRepository rackRepository;
 
     @Operation(summary = "하드웨어 장비 등록", description = "새로운 물리 하드웨어 장비를 시스템에 등록합니다. (랙 실장 정보 포함 가능)")
     @PostMapping
@@ -101,86 +103,88 @@ public class HardwareController {
         return ResponseEntity.noContent().build(); // 204 No Content
     }
 
-    // @Operation(summary = "하드웨어 목록 엑셀 다운로드", description = "검색 조건에 맞는 하드웨어 목록을 엑셀
-    // 파일로 다운로드합니다.")
-    // @GetMapping("/excel/download")
-    // public void downloadExcel(@RequestParam Map<String, String> searchParams,
-    // HttpServletResponse response)
-    // throws Exception {
+    @GetMapping("/excel/download")
+    public void downloadExcel(@RequestParam Map<String, String> searchParams, HttpServletResponse response)
+            throws Exception {
+        // 페이징 없이 최대 10,000건 조회
+        PageRequest maxPageRequest = PageRequest.of(0, 10000, Sort.by("id").descending());
+        Page<HardwareResponse> hardwarePage = hardwareService.searchHardwares(searchParams, maxPageRequest);
 
-    // // 1. 현재 검색 조건에 맞는 데이터를 모두 가져옵니다
-    // PageRequest maxPageRequest = PageRequest.of(0, 10000,
-    // Sort.by("id").descending());
-    // Page<HardwareResponse> serverPage =
-    // hardwareService.searchHardwares(searchParams, maxPageRequest);
+        List<String> headers = Arrays.asList(
+                "위치", "랙 정보", "슬롯", "크기", "구분", "설명", "모델", "시리얼번호", "도입년도", "전원여부");
 
-    // // 2. 🌟 요청하신 실무형 커스텀 엑셀 헤더 적용
-    // List<String> headers = Arrays.asList(
-    // "위치", "분류", "H/W", "용도", "서버명", "설명", "운영체제(Version)",
-    // "IP", "CPU", "Memory", "Disk", "Softwares", "백업", "HA", "모니터링");
+        List<List<Object>> dataList = new ArrayList<>();
+        for (HardwareResponse hw : hardwarePage.getContent()) {
+            dataList.add(Arrays.asList(
+                    hw.getLocationName() != null ? hw.getLocationName() : "-",
+                    hw.getRackNo() != null ? hw.getRackNo() : "-",
+                    hw.getRackPosition(),
+                    hw.getSize(),
+                    hw.getEquipmentType(),
+                    hw.getDescription(),
+                    hw.getModel(),
+                    hw.getSerialNo(),
+                    hw.getIntroductionYear(),
+                    // 전원여부는 A/B 라인 상태를 요약해서 표시
+                    hw.getIsSinglePower() ? hw.getPowerLine() : "O"));
+        }
+        ExcelUtil.download(response, "AKIMS_하드웨어_자산대장", headers, dataList);
+    }
 
-    // // 3. 데이터를 2차원 리스트로 변환
-    // List<List<Object>> dataList = new ArrayList<>();
-    // for (HardwareResponse srv : serverPage.getContent()) {
+    // ==========================================
+    // 2. 🌟 하드웨어 엑셀 업로드 (명칭 기반 ID 매핑)
+    // ==========================================
+    @PostMapping("/excel/upload")
+    public ResponseEntity<Map<String, String>> uploadExcel(@RequestParam("file") MultipartFile file) {
+        try {
+            List<List<String>> excelData = ExcelUtil.readExcel(file);
+            int successCount = 0;
 
-    // // 🌟 핵심 방어 로직: 1:N List 객체들을 엑셀 한 칸에 들어갈 수 있도록 예쁜 문자열로 변환 (예: "10.0.0.1,
-    // // 10.0.0.2")
-    // String ipStr = srv.getIps() != null
-    // ?
-    // srv.getIps().stream().map(IpAssignRequest::getIpAddress).collect(Collectors.joining("\n"))
-    // : "";
+            // 랙 전체 목록 캐싱 (텍스트 매핑용)
+            List<Rack> allRacks = rackRepository.findAll();
 
-    // String diskStr = srv.getDisks() != null ? srv.getDisks().stream()
-    // .map(d -> d.getDiskType() + "(" + d.getSize() + "GB, " + d.getMountPoint() +
-    // ")")
-    // .collect(Collectors.joining("\n")) : "";
+            for (int i = 1; i < excelData.size(); i++) {
+                List<String> row = excelData.get(i);
+                if (row.size() < 7 || row.get(6).trim().isEmpty())
+                    continue; // 시리얼번호(6번) 필수
 
-    // String swStr = srv.getSoftwares() != null ? srv.getSoftwares().stream()
-    // .map(s -> s.getName() + " " + (s.getVersion() != null ? s.getVersion() : ""))
-    // .collect(Collectors.joining("\n")) : "";
+                try {
+                    HardwareCreateRequest request = new HardwareCreateRequest();
 
-    // dataList.add(Arrays.asList(
-    // srv.getLocationName() != null ? srv.getLocationName() : "-",
-    // srv.getServerCategory(),
-    // srv.getSerialNo() != null ? srv.getSerialNo() : "-",
-    // srv.getEnvironment(),
-    // srv.getHostName(),
-    // srv.getDescription() != null ? srv.getDescription() : "",
-    // srv.getOs(),
-    // ipStr, // 파싱된 IP 문자열
-    // srv.getCpuCore(),
-    // srv.getMemoryGb(),
-    // diskStr, // 파싱된 Disk 문자열
-    // swStr, // 파싱된 S/W 문자열
-    // srv.getBackupInfo(),
-    // srv.isHa() ? "O" : "X", // 롬복의 boolean getter는 기본적으로 isHa()로 생성됩니다.
-    // srv.getMonitoringInfo()));
-    // }
+                    // [1] 랙 정보 -> Rack ID 매핑 (위치와 랙번호 조합으로 찾음)
+                    String rackNoStr = row.get(1).trim();
+                    Rack matchedRack = allRacks.stream()
+                            .filter(r -> r.getRackNo().equals(rackNoStr))
+                            .findFirst().orElse(null);
 
-    // // 4. 유틸리티를 통한 즉시 다운로드 (파일명도 직관적으로 변경)
-    // ExcelUtil.download(response, "AKIMS_서버대장_추출", headers, dataList);
-    // }
+                    if (matchedRack != null)
+                        request.setRackId(matchedRack.getId());
 
-    // @Operation(summary = "서버 대량 업로드", description = "엑셀 파일을 업로드하여 서버를 대량으로
-    // 등록합니다.")
-    // @PostMapping("/excel/upload")
-    // public ResponseEntity<String> uploadExcel(@RequestParam("file") MultipartFile
-    // file) {
-    // try {
-    // List<List<String>> excelData = ExcelUtil.readExcel(file);
+                    request.setRackPosition(Integer.parseInt(row.get(2))); // [2] 슬롯
+                    request.setSize(Integer.parseInt(row.get(3))); // [3] 크기
+                    request.setEquipmentType(EquipmentType.valueOf(row.get(4).toUpperCase())); // [4] 구분
+                    request.setDescription(row.get(5)); // [5] 설명
+                    request.setModel(row.get(6)); // [6] 모델
+                    request.setSerialNo(row.get(7).trim()); // [7] 시리얼번호
+                    request.setIntroductionYear(Integer.parseInt(row.get(8))); // [8] 도입년도
 
-    // // TODO: excelData를 파싱하여 ServerCreateRequest로 변환하고
-    // serverService.createServer()
-    // // 호출 로직 작성
-    // // (첫 번째 줄은 헤더이므로 건너뛰고 1번 인덱스부터 읽음)
-    // log.info("읽어들인 엑셀 총 행(Row) 수: {}", excelData.size());
+                    // [9] 전원여부 파싱 (예: "A:ON / B:OFF" 형태일 경우)
+                    if (row.get(9).toUpperCase().equals("O")) {
+                        request.setIsSinglePower(false);
+                    } else {
+                        request.setIsSinglePower(true);
+                        request.setPowerLine(row.get(9).toUpperCase());
+                    }
 
-    // return ResponseEntity.ok("엑셀 업로드 및 처리 완료 (총 " + (excelData.size() - 1) +
-    // "건)");
-    // } catch (Exception e) {
-    // log.error("엑셀 업로드 실패", e);
-    // return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("엑셀 처리 중
-    // 오류 발생: " + e.getMessage());
-    // }
-    // }
+                    hardwareService.createHardware(request);
+                    successCount++;
+                } catch (Exception e) {
+                    // 개별 행 오류 시 로그 남기고 계속 진행
+                }
+            }
+            return ResponseEntity.ok(Map.of("message", "총 " + successCount + "건의 하드웨어가 등록되었습니다."));
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of("message", "엑셀 처리 실패: " + e.getMessage()));
+        }
+    }
 }

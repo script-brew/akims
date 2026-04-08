@@ -177,7 +177,10 @@
   background: linear-gradient(135deg, #2980b9, #3498db);
 }
 .hw-switch {
-  background: linear-gradient(135deg, #c0392b, #e74c3c);
+  background: linear-gradient(135deg, #cddd3e, #dae760);
+}
+.hw-firewall {
+  background: linear-gradient(135deg, #2bc069, #44e085);
 }
 .hw-storage {
   background: linear-gradient(135deg, #d35400, #e67e22);

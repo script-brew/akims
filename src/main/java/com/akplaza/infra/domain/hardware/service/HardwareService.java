@@ -7,6 +7,7 @@ import java.util.Map;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 
 import com.akplaza.infra.domain.device.repository.NetworkDeviceRepository;
@@ -127,8 +128,21 @@ public class HardwareService {
 
         // 2. 만들어진 조건과 페이징 정보를 Repository에 넘깁니다. (메서드는 기본 내장된 findAll 사용)
         Page<Hardware> hardwarePage = hardwareRepository.findAll(spec, pageable);
+        List<Hardware> hardwares = hardwarePage.getContent();
 
-        return hardwarePage.map(HardwareResponse::new);
+        // 결과가 없으면 빈 페이지 반환
+        if (hardwares.isEmpty()) {
+            return new PageImpl<>(java.util.Collections.emptyList(), pageable, hardwarePage.getTotalElements());
+        }
+
+        // 5. 🌟 DTO로 안전하게 조립 (데이터 중복 증식 방지)
+        List<HardwareResponse> responseList = hardwares.stream().map(hardware -> {
+            // ServerResponse 생성자에 엔티티의 연관 객체들을 넘겨주면, DTO 클래스 안에서 필요한 것만 예쁘게 파싱함
+            return new HardwareResponse(hardware);
+        }).collect(Collectors.toList());
+
+        // return hardwarePage.map(HardwareResponse::new);
+        return new PageImpl<>(responseList, pageable, hardwarePage.getTotalElements());
     }
 
     public List<HardwareResponse> getAllHardwares() {

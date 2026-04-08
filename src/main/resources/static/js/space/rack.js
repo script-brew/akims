@@ -39,7 +39,8 @@ document.getElementById("btn-close-visual").addEventListener("click", () => {
 // --- API Calls & Render ---
 async function loadLocations() {
   try {
-    locationList = await api.get("/api/v1/locations");
+    const responseData = await api.get("/api/v1/locations?size=1000");
+    locationList = responseData.content || [];
     selLocation.innerHTML = locationList
       .map((loc) => `<option value="${loc.id}">${loc.name}</option>`)
       .join("");
@@ -51,7 +52,8 @@ async function loadLocations() {
 // 🌟 추가: 하드웨어 전체 목록 조회
 async function loadHardwares() {
   try {
-    hardwareList = await api.get("/api/v1/hardwares");
+    const responseData = await api.get("/api/v1/hardwares?size=1000");
+    hardwareList = responseData.content || []; // 🚨 핵심: .content 배열 추출
   } catch (error) {
     console.error("하드웨어 데이터 로드 실패");
   }
@@ -59,7 +61,8 @@ async function loadHardwares() {
 
 async function loadRacks() {
   try {
-    rackList = await api.get("/api/v1/racks");
+    const responseData = await api.get("/api/v1/racks?size=1000");
+    rackList = responseData.content || [];
     renderTable();
   } catch (error) {
     gridContainer.innerHTML = `<p style="color:red;">데이터 로드 실패</p>`;

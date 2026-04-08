@@ -27,10 +27,6 @@ let searchFilter, pagination;
 let currentPage = 0;
 
 document.addEventListener("DOMContentLoaded", async () => {
-  await loadServers(); // 서버 목록 먼저 로드
-  await loadDisks();
-  setupEventListeners();
-
   const filterOptions = [
     { value: "diskType", label: "디스크 타입 (SSD/HDD 등)" },
     { value: "mountPoint", label: "마운트 경로" },
@@ -38,7 +34,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   searchFilter = new SearchFilter(
     document.getElementById("disk-search-filter"),
-    [filterOptions],
+    filterOptions,
     () => {
       currentPage = 0;
       loadDisks();
@@ -52,6 +48,10 @@ document.addEventListener("DOMContentLoaded", async () => {
       loadDisks();
     }
   );
+
+  await loadServers(); // 서버 목록 먼저 로드
+  await loadDisks();
+  setupEventListeners();
 });
 
 // --- Event Listeners ---
@@ -69,7 +69,7 @@ function setupEventListeners() {
 // --- API Loaders ---
 async function loadServers() {
   try {
-    serverList = await api.get("/api/v1/servers");
+    serverList = (await api.get("/api/v1/servers?size=1000").content) || [];
     const options = serverList
       .map((s) => `<option value="${s.id}">${s.hostName} (${s.os})</option>`)
       .join("");

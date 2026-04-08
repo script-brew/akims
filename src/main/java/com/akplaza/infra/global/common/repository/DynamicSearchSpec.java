@@ -8,9 +8,6 @@ import java.util.Map;
 
 public class DynamicSearchSpec {
 
-    /**
-     * 🌟 프론트엔드에서 넘어온 검색 조건(Map)을 동적 WHERE 절로 변환하는 마법의 메서드
-     */
     public static <T> Specification<T> searchConditions(Map<String, String> searchParams) {
         return (root, query, builder) -> {
             List<Predicate> predicates = new ArrayList<>();
@@ -19,19 +16,29 @@ public class DynamicSearchSpec {
                 String key = entry.getKey();
                 String value = entry.getValue();
 
-                // 1. 페이징 시스템 파라미터는 검색 조건에서 제외
+                // 1. 시스템 파라미터는 검색 조건에서 제외
                 if (key.equals("page") || key.equals("size") || key.equals("sort")) {
                     continue;
                 }
 
-                // 2. 값이 존재하는 경우에만 동적으로 조건(Predicate) 추가
+                // 2. 값이 존재하는 경우에만 처리
                 if (value != null && !value.trim().isEmpty()) {
-                    // .as(String.class)를 사용하여 Enum이나 숫자형 컬럼에도 안전하게 LIKE 검색 적용
-                    predicates.add(builder.like(root.get(key).as(String.class), "%" + value.trim() + "%"));
+                    try {
+                        // 🛡️ 방어 로직 1: 엔티티에 해당 컬럼(key)이 존재하는지 시도하고, 없으면 예외를 무시함
+                        predicates.add(builder.like(root.get(key).as(String.class), "%" + value.trim() + "%"));
+                    } catch (IllegalArgumentException e) {
+                        // 프론트엔드에서 엔티티에 없는 파라미터를 보냈을 경우 무시하고 다음 조건으로 넘어감
+                        continue;
+                    }
                 }
             }
 
-            // 조립된 모든 조건들을 AND 로 묶어서 반환 (조건이 없으면 조건 없는 전체 조회)
+            // 🚨 핵심 해결 포인트: 조립된 조건이 하나도 없을 경우 null을 반환!
+            // (Spring Data JPA에서 Specification이 null을 반환하면 WHERE 절 없이 전체를 깔끔하게 조회합니다)
+            if (predicates.isEmpty()) {
+                return null;
+            }
+
             return builder.and(predicates.toArray(new Predicate[0]));
         };
     }

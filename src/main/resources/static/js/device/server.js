@@ -89,15 +89,17 @@ document.addEventListener("DOMContentLoaded", async () => {
   );
 
   await loadHardwares(); // 하드웨어 매핑용
-  // await loadCidrs(); // 🌟 IP 대역 로드
+  await loadCidrs(); // 🌟 IP 대역 로드
   await loadServers();
   setupEventListeners();
 });
 
-// 🌟 추가: IP 대역 목록 불러오기
+// 🌟 IP 대역 목록 로드 (Page 객체 대응)
 async function loadCidrs() {
   try {
-    cidrList = await api.get("/api/v1/ip-cidrs");
+    const responseData = await api.get("/api/v1/ip-cidrs?size=1000");
+    cidrList = responseData.content || []; // 🚨 핵심: .content 배열 추출
+
     const options = cidrList
       .map(
         (cidr) =>
@@ -113,11 +115,13 @@ async function loadCidrs() {
   }
 }
 
-// --- API Calls ---
+// 🌟 하드웨어 매핑 목록 로드 (Page 객체 대응)
 async function loadHardwares() {
   try {
-    hardwareList = await api.get("/api/v1/hardwares");
-    // 서버가 탑재될 수 있는 장비(주로 서버 타입 장비)만 필터링해서 보여주면 더 좋습니다.
+    // 콤보박스에 전체를 띄우기 위해 size를 넉넉히 줍니다.
+    const responseData = await api.get("/api/v1/hardwares?size=1000");
+    hardwareList = responseData.content || []; // 🚨 핵심: .content 배열 추출
+
     const options = hardwareList
       .filter((hw) => hw.equipmentType === "SERVER")
       .map(

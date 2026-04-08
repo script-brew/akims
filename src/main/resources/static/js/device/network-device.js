@@ -33,10 +33,6 @@ let searchFilter, pagination;
 let currentPage = 0;
 
 document.addEventListener("DOMContentLoaded", async () => {
-  await loadHardwares();
-  await loadCidrs();
-  await loadNetworkDevices();
-
   const filterOptions = [
     { value: "name", label: "서버명 (Host)" },
     { value: "os", label: "운영체제 (OS)" },
@@ -45,7 +41,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   searchFilter = new SearchFilter(
     document.getElementById("network-search-filter"),
-    [filterOptions],
+    filterOptions,
     () => {
       currentPage = 0;
       loadNetworkDevices();
@@ -57,10 +53,12 @@ document.addEventListener("DOMContentLoaded", async () => {
     (pageNo) => {
       currentPage = pageNo;
       loadNetworkDevices();
-
-      setupEventListeners();
     }
   );
+  await loadHardwares();
+  await loadCidrs();
+  await loadNetworkDevices();
+  setupEventListeners();
 });
 
 // --- Event Listeners ---
@@ -79,7 +77,8 @@ function setupEventListeners() {
 // --- API Loaders ---
 async function loadHardwares() {
   try {
-    hardwareList = await api.get("/api/v1/hardwares");
+    const responseData = await api.get("/api/v1/hardwares?size=1000");
+    hardwareList = responseData.content || []; // 🚨 핵심: .content 배열 추출
     // 네트워크 장비 계열만 필터링 (스위치, 라우터, 방화벽)
     const options = hardwareList
       .filter(
@@ -99,31 +98,34 @@ async function loadHardwares() {
   }
 }
 
+// 🌟 IP 대역 목록 로드 (Page 객체 대응)
 async function loadCidrs() {
   try {
-    cidrList = await api.get("/api/v1/ip-cidrs");
+    const responseData = await api.get("/api/v1/ip-cidrs?size=1000");
+    cidrList = responseData.content || []; // 🚨 핵심: .content 배열 추출
+
     const options = cidrList
       .map(
         (cidr) =>
           `<option value="${cidr.id}">${cidr.cidrBlock} (${
-            cidr.description || ""
+            cidr.description || "이름 없음"
           })</option>`
       )
       .join("");
     selIpCidr.innerHTML =
       `<option value="">-- 대역 선택 (연동 안함) --</option>` + options;
-  } catch (e) {
-    console.error("CIDR 로드 실패", e);
+  } catch (error) {
+    console.error("IP 대역 목록 로드 실패", error);
   }
 }
 
 async function loadNetworkDevices() {
   try {
-    const params = searchFilter.getQueryParams();
-    const responseData = await api.get(
-      `/api/v1/network-devices?page=${currentPage}&size=20${params}`
-    );
+    const filterParams = searchFilter.getQueryParams();
+    const url = `/api/v1/network-devices?page=${currentPage}&size=20${filterParams}`;
+    const responseData = await api.get(url);
     deviceList = responseData.content || [];
+
     renderTable();
     pagination.render(responseData.totalPages, responseData.number);
   } catch (e) {

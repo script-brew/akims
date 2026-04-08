@@ -5,6 +5,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
@@ -200,6 +201,32 @@ public class IpService {
         return ipCidrRepository.findAll().stream()
                 .map(IpCidrResponse::new)
                 .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    // 🌟 수정됨: 개별 파라미터 대신 Map<String, String> 을 통째로 받습니다.
+    public Page<IpCidrResponse> searchIpCidrs(Map<String, String> searchParams, Pageable pageable) {
+
+        // 1. Map을 던져주면 공통 유틸이 동적 WHERE 절(Specification)을 만들어줍니다.
+        Specification<IpCidr> spec = DynamicSearchSpec.searchConditions(searchParams);
+
+        // 2. 만들어진 조건과 페이징 정보를 Repository에 넘깁니다. (메서드는 기본 내장된 findAll 사용)
+        Page<IpCidr> ipCidrPage = ipCidrRepository.findAll(spec, pageable);
+        List<IpCidr> ipCidrs = ipCidrPage.getContent();
+
+        // 결과가 없으면 빈 페이지 반환
+        if (ipCidrs.isEmpty()) {
+            return new PageImpl<>(java.util.Collections.emptyList(), pageable, ipCidrPage.getTotalElements());
+        }
+
+        // 5. 🌟 DTO로 안전하게 조립 (데이터 중복 증식 방지)
+        List<IpCidrResponse> responseList = ipCidrs.stream().map(ipCidr -> {
+            // ServerResponse 생성자에 엔티티의 연관 객체들을 넘겨주면, DTO 클래스 안에서 필요한 것만 예쁘게 파싱함
+            return new IpCidrResponse(ipCidr);
+        }).collect(Collectors.toList());
+
+        // return hardwarePage.map(HardwareResponse::new);
+        return new PageImpl<>(responseList, pageable, ipCidrPage.getTotalElements());
     }
 
     // 🌟 추가 2: Visual IP Map을 위한 특정 대역 상세 조회 (IP 목록 포함)

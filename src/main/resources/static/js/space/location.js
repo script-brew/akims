@@ -39,11 +39,11 @@ async function loadAllData() {
     const [locs, racks, hws] = await Promise.all([
       api.get("/api/v1/locations"),
       api.get("/api/v1/racks"),
-      api.get("/api/v1/hardwares"),
+      api.get("/api/v1/hardwares?size=1000"),
     ]);
     locationList = locs;
     rackList = racks;
-    hardwareList = hws;
+    hardwareList = hws.content || [];
     renderLocationTable();
 
     // 랙 추가/삭제 후 뷰를 새로고침하기 위함

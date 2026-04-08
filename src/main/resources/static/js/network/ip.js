@@ -25,9 +25,6 @@ let searchFilter, pagination;
 let currentPage = 0;
 
 document.addEventListener("DOMContentLoaded", async () => {
-  await loadCidrs();
-  setupEventListeners();
-
   const filterOptions = [
     { value: "cidrBlock", label: "IP 대역 (CIDR)" },
     { value: "description", label: "설명/용도" },
@@ -49,6 +46,9 @@ document.addEventListener("DOMContentLoaded", async () => {
       loadCidrs();
     }
   );
+
+  await loadCidrs();
+  setupEventListeners();
 });
 
 function setupEventListeners() {
@@ -68,11 +68,11 @@ function setupEventListeners() {
 
 async function loadCidrs() {
   try {
-    const params = searchFilter.getQueryParams();
-    const responseData = await api.get(
-      `/api/v1/ip-cidrs?page=${currentPage}&size=20${params}`
-    );
+    const filterParams = searchFilter.getQueryParams();
+    const url = `/api/v1/ip-cidrs?page=${currentPage}&size=20${filterParams}`;
+    const responseData = await api.get(url);
     cidrList = responseData.content || [];
+
     renderTable();
     pagination.render(responseData.totalPages, responseData.number);
   } catch (e) {

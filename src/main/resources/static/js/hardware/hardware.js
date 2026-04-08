@@ -38,9 +38,6 @@ let currentPage = 0;
 
 // --- Init ---
 document.addEventListener("DOMContentLoaded", async () => {
-  await loadRacks(); // 랙 목록을 먼저 불러와 실장 위치 콤보박스 세팅
-  await loadHardwares(); // 하드웨어 목록 세팅
-
   const filterOptions = [
     { value: "model", label: "모델명" },
     { value: "serialNo", label: "시리얼 번호" },
@@ -62,7 +59,8 @@ document.addEventListener("DOMContentLoaded", async () => {
       loadHardwares();
     }
   );
-
+  await loadRacks(); // 랙 목록을 먼저 불러와 실장 위치 콤보박스 세팅
+  await loadHardwares(); // 하드웨어 목록 세팅
   setupEventListeners();
 });
 
@@ -70,6 +68,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 async function loadRacks() {
   try {
     rackList = await api.get("/api/v1/racks");
+
     const options = rackList
       .map(
         (rack) =>
@@ -85,12 +84,13 @@ async function loadRacks() {
 
 async function loadHardwares() {
   try {
-    const params = searchFilter.getQueryParams();
-    const responseData = await api.get(
-      `/api/v1/hardwares?page=${currentPage}&size=20${params}`
-    );
+    const filterParams = searchFilter.getQueryParams();
+    const url = `/api/v1/hardwares?page=${currentPage}&size=20${filterParams}`;
 
-    hardwareList = data.filter((hw) => hw.model !== "shelf");
+    const responseData = await api.get(url);
+    hardwareList = responseData.content || []; // 🚨 핵심: .content 배열 추출
+
+    hardwareList = hardwareList.filter((hw) => hw.model !== "shelf");
     renderTable();
     pagination.render(responseData.totalPages, responseData.number);
   } catch (error) {
@@ -115,6 +115,7 @@ function renderTable() {
     .map((hw) => {
       // 🌟 1. Location(장소) 정보 추출: 이미 로드된 rackList에서 해당 하드웨어가 꽂힌 랙을 찾아 장소명을 가져옵니다.
       const targetRack = rackList.find((r) => r.id === hw.rackId);
+      console.log(targetRack);
       const locationName = targetRack
         ? targetRack.locationName
         : '<span style="color:#999;">미실장</span>';

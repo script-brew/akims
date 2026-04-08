@@ -101,7 +101,7 @@ public class NetworkDeviceService {
     @Transactional(readOnly = true)
     // 🌟 수정됨: 개별 파라미터 대신 Map<String, String> 을 통째로 받습니다.
     public Page<NetworkDeviceResponse> searchNetworkDevices(Map<String, String> searchParams, Pageable pageable) {
-
+        log.debug("네트워크 장비 목록 조회 요청");
         // 1. Map을 던져주면 공통 유틸이 동적 WHERE 절(Specification)을 만들어줍니다.
         Specification<NetworkDevice> spec = DynamicSearchSpec.searchConditions(searchParams);
 

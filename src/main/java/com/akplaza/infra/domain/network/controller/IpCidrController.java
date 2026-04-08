@@ -1,7 +1,11 @@
 package com.akplaza.infra.domain.network.controller;
 
 import java.util.List;
+import java.util.Map;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -10,6 +14,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.akplaza.infra.domain.network.dto.IpCidrCreateRequest;
@@ -40,12 +45,24 @@ public class IpCidrController {
         return ResponseEntity.status(HttpStatus.CREATED).body(ipCidrId);
     }
 
-    // 🌟 추가: 전체 대역 목록 조회
-    @Operation(summary = "전체 IP 대역 조회", description = "시스템에 등록된 모든 IP 대역 목록을 조회합니다.")
     @GetMapping
-    public ResponseEntity<List<IpCidrResponse>> getAllIpCidrs() {
-        return ResponseEntity.ok(ipService.getAllIpCidrs());
+    public ResponseEntity<Page<IpCidrResponse>> getIpCidrs(
+            @RequestParam Map<String, String> searchParams, // 🌟 핵심: 프론트가 보내는 모든 필터를 Map으로 흡수
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+
+        PageRequest pageRequest = PageRequest.of(page, size, Sort.by("id").descending());
+
+        return ResponseEntity.ok(ipService.searchIpCidrs(searchParams, pageRequest));
     }
+
+    // // 🌟 추가: 전체 대역 목록 조회
+    // @Operation(summary = "전체 IP 대역 조회", description = "시스템에 등록된 모든 IP 대역 목록을
+    // 조회합니다.")
+    // @GetMapping
+    // public ResponseEntity<List<IpCidrResponse>> getAllIpCidrs() {
+    // return ResponseEntity.ok(ipService.getAllIpCidrs());
+    // }
 
     // 🌟 15년 차의 핵심: Visual IP Map을 그리기 위한 상세 조회
     @Operation(summary = "특정 IP 대역 및 소속 IP 현황 조회", description = "Visual Map 렌더링을 위해 특정 대역에 속한 모든 개별 IP의 현황을 조회합니다.")

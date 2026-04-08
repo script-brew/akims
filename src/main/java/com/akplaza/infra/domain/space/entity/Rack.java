@@ -40,18 +40,23 @@ public class Rack extends BaseTimeEntity {
     @Column(nullable = false)
     private Integer size; // 총 U 수 (보통 42U 또는 48U)
 
-    public void updateRackInfo(Location location, String rackNo, String name, Integer size) {
+    @Column
+    private String description;
+
+    public void updateRackInfo(Location location, String rackNo, String name, Integer size, String description) {
         this.location = location;
         this.rackNo = rackNo;
         this.name = name;
         this.size = size;
+        this.description = description;
     }
 
     @Builder
-    public Rack(Location location, String rackNo, String name, Integer size) {
+    public Rack(Location location, String rackNo, String name, Integer size, String description) {
         this.location = location;
         this.rackNo = rackNo;
         this.name = name;
         this.size = size != null ? size : 42; // 기본값 42U
+        this.description = description;
     }
 }

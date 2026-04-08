@@ -18,6 +18,27 @@
         <div class="content-header">
           <h2>논리 서버(Server) 관리</h2>
           <div class="header-actions">
+            <input
+              type="file"
+              id="excel-file-input"
+              accept=".xlsx, .xls"
+              style="display: none"
+            />
+            <button
+              id="btn-upload-excel"
+              class="btn"
+              style="background-color: #27ae60"
+            >
+              ⬆️ 엑셀 업로드
+            </button>
+            <button
+              id="btn-download-excel"
+              class="btn"
+              style="background-color: #2980b9"
+            >
+              ⬇️ 엑셀 다운로드
+            </button>
+
             <button id="btn-open-modal" class="btn">새 서버 등록</button>
             <button id="btn-edit" class="btn" style="background-color: #f39c12">
               선택 수정

@@ -74,20 +74,16 @@ public class RackService {
     }
 
     @Transactional
-    public Long updateRack(RackRequest dto) {
+    public Long updateRack(Long id, RackRequest dto) {
         log.info("[UPDATE] Rack 수정 요청: {}", dto.getRackNo());
-        if (rackRepository.existsByRackNo(dto.getRackNo())) {
-            throw new DuplicateResourceException("이미 존재하는 랙 번호입니다.");
-        }
+
+        Rack rack = rackRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("수정할 랙을 찾을 수 없습니다. ID: " + id));
+
         Location location = locationRepository.findById(dto.getLocationId())
                 .orElseThrow(() -> new ResourceNotFoundException("장소 정보를 찾을 수 없습니다."));
 
-        Rack rack = Rack.builder()
-                .location(location)
-                .rackNo(dto.getRackNo())
-                .name(dto.getName())
-                .size(dto.getSize())
-                .build();
+        rack.updateRackInfo(location, dto.getRackNo(), dto.getName(), dto.getSize(), dto.getDescription());
         return rackRepository.save(rack).getId();
     }
 }

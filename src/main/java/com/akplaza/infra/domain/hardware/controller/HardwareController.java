@@ -1,7 +1,10 @@
 package com.akplaza.infra.domain.hardware.controller;
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
@@ -15,14 +18,19 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
+import com.akplaza.infra.domain.device.dto.ServerResponse;
 import com.akplaza.infra.domain.hardware.dto.HardwareCreateRequest;
 import com.akplaza.infra.domain.hardware.dto.HardwareResponse;
 import com.akplaza.infra.domain.hardware.dto.HardwareUpdateRequest;
 import com.akplaza.infra.domain.hardware.service.HardwareService;
+import com.akplaza.infra.domain.network.dto.IpAssignRequest;
+import com.akplaza.infra.global.common.util.ExcelUtil;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.domain.Page;
@@ -92,4 +100,87 @@ public class HardwareController {
         hardwareService.deleteHardware(id);
         return ResponseEntity.noContent().build(); // 204 No Content
     }
+
+    // @Operation(summary = "하드웨어 목록 엑셀 다운로드", description = "검색 조건에 맞는 하드웨어 목록을 엑셀
+    // 파일로 다운로드합니다.")
+    // @GetMapping("/excel/download")
+    // public void downloadExcel(@RequestParam Map<String, String> searchParams,
+    // HttpServletResponse response)
+    // throws Exception {
+
+    // // 1. 현재 검색 조건에 맞는 데이터를 모두 가져옵니다
+    // PageRequest maxPageRequest = PageRequest.of(0, 10000,
+    // Sort.by("id").descending());
+    // Page<HardwareResponse> serverPage =
+    // hardwareService.searchHardwares(searchParams, maxPageRequest);
+
+    // // 2. 🌟 요청하신 실무형 커스텀 엑셀 헤더 적용
+    // List<String> headers = Arrays.asList(
+    // "위치", "분류", "H/W", "용도", "서버명", "설명", "운영체제(Version)",
+    // "IP", "CPU", "Memory", "Disk", "Softwares", "백업", "HA", "모니터링");
+
+    // // 3. 데이터를 2차원 리스트로 변환
+    // List<List<Object>> dataList = new ArrayList<>();
+    // for (HardwareResponse srv : serverPage.getContent()) {
+
+    // // 🌟 핵심 방어 로직: 1:N List 객체들을 엑셀 한 칸에 들어갈 수 있도록 예쁜 문자열로 변환 (예: "10.0.0.1,
+    // // 10.0.0.2")
+    // String ipStr = srv.getIps() != null
+    // ?
+    // srv.getIps().stream().map(IpAssignRequest::getIpAddress).collect(Collectors.joining("\n"))
+    // : "";
+
+    // String diskStr = srv.getDisks() != null ? srv.getDisks().stream()
+    // .map(d -> d.getDiskType() + "(" + d.getSize() + "GB, " + d.getMountPoint() +
+    // ")")
+    // .collect(Collectors.joining("\n")) : "";
+
+    // String swStr = srv.getSoftwares() != null ? srv.getSoftwares().stream()
+    // .map(s -> s.getName() + " " + (s.getVersion() != null ? s.getVersion() : ""))
+    // .collect(Collectors.joining("\n")) : "";
+
+    // dataList.add(Arrays.asList(
+    // srv.getLocationName() != null ? srv.getLocationName() : "-",
+    // srv.getServerCategory(),
+    // srv.getSerialNo() != null ? srv.getSerialNo() : "-",
+    // srv.getEnvironment(),
+    // srv.getHostName(),
+    // srv.getDescription() != null ? srv.getDescription() : "",
+    // srv.getOs(),
+    // ipStr, // 파싱된 IP 문자열
+    // srv.getCpuCore(),
+    // srv.getMemoryGb(),
+    // diskStr, // 파싱된 Disk 문자열
+    // swStr, // 파싱된 S/W 문자열
+    // srv.getBackupInfo(),
+    // srv.isHa() ? "O" : "X", // 롬복의 boolean getter는 기본적으로 isHa()로 생성됩니다.
+    // srv.getMonitoringInfo()));
+    // }
+
+    // // 4. 유틸리티를 통한 즉시 다운로드 (파일명도 직관적으로 변경)
+    // ExcelUtil.download(response, "AKIMS_서버대장_추출", headers, dataList);
+    // }
+
+    // @Operation(summary = "서버 대량 업로드", description = "엑셀 파일을 업로드하여 서버를 대량으로
+    // 등록합니다.")
+    // @PostMapping("/excel/upload")
+    // public ResponseEntity<String> uploadExcel(@RequestParam("file") MultipartFile
+    // file) {
+    // try {
+    // List<List<String>> excelData = ExcelUtil.readExcel(file);
+
+    // // TODO: excelData를 파싱하여 ServerCreateRequest로 변환하고
+    // serverService.createServer()
+    // // 호출 로직 작성
+    // // (첫 번째 줄은 헤더이므로 건너뛰고 1번 인덱스부터 읽음)
+    // log.info("읽어들인 엑셀 총 행(Row) 수: {}", excelData.size());
+
+    // return ResponseEntity.ok("엑셀 업로드 및 처리 완료 (총 " + (excelData.size() - 1) +
+    // "건)");
+    // } catch (Exception e) {
+    // log.error("엑셀 업로드 실패", e);
+    // return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("엑셀 처리 중
+    // 오류 발생: " + e.getMessage());
+    // }
+    // }
 }

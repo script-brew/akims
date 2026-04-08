@@ -22,4 +22,6 @@ public class RackRequest {
     @NotNull(message = "랙의 최대 수용 크기(U)를 입력해주세요.")
     @Min(value = 1, message = "랙 크기는 1U 이상이어야 합니다.")
     private Integer size;
+
+    private String description;
 }

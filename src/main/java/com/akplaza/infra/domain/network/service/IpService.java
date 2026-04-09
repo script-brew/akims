@@ -1,15 +1,20 @@
 package com.akplaza.infra.domain.network.service;
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import com.akplaza.infra.domain.network.dto.IpCidrCreateRequest;
 import com.akplaza.infra.domain.network.dto.IpCidrDetailResponse;
@@ -26,10 +31,12 @@ import com.akplaza.infra.domain.hardware.dto.HardwareResponse;
 import com.akplaza.infra.domain.hardware.entity.Hardware;
 import com.akplaza.infra.domain.device.repository.NetworkDeviceRepository;
 import com.akplaza.infra.global.common.repository.DynamicSearchSpec;
+import com.akplaza.infra.global.common.util.ExcelUtil;
 import com.akplaza.infra.global.error.exception.DuplicateResourceException;
 import com.akplaza.infra.global.error.exception.ResourceInUseException;
 import com.akplaza.infra.global.error.exception.ResourceNotFoundException;
 
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -125,6 +132,12 @@ public class IpService {
     @Transactional
     public Long createIpCidr(IpCidrCreateRequest dto) {
         log.info("IP 대역폭(CIDR) 등록 요청 - Block: {}", dto.getCidrBlock());
+
+        // 🌟 단건 API 등록 시에도 형식 검증 (화면에서 잘못 넘어오는 것 차단)
+        if (!isValidCidrFormat(dto.getCidrBlock())) {
+            log.error("CIDR 등록 실패 - 잘못된 형식: {}", dto.getCidrBlock());
+            throw new IllegalArgumentException("잘못된 CIDR 형식입니다: " + dto.getCidrBlock());
+        }
 
         if (ipCidrRepository.existsByCidrBlock(dto.getCidrBlock())) {
             log.error("CIDR 등록 실패 - 중복된 대역: {}", dto.getCidrBlock());
@@ -273,5 +286,88 @@ public class IpService {
         // 사용 중인 IP가 없다면, 대역 내의 IP 풀을 모두 지우고 대역 자체를 삭제
         ipRepository.deleteByIpCidrId(cidrId);
         ipCidrRepository.delete(ipCidr);
+    }
+
+    // ==========================================
+    // 3. 엑셀 다운로드 (IP CIDR)
+    // ==========================================
+    public void downloadExcelIpCidr(Map<String, String> searchParams, HttpServletResponse response) throws Exception {
+        log.info("IP 대역 엑셀 다운로드 시작");
+
+        // 검색 조건을 유지한 채로 최대 10,000건 조회
+        PageRequest maxPageRequest = PageRequest.of(0, 10000, Sort.by("id").descending());
+        Page<IpCidrResponse> cidrPage = this.searchIpCidrs(searchParams, maxPageRequest);
+
+        // 엑셀 헤더 정의
+        List<String> headers = Arrays.asList("IP 대역(CIDR Block)", "설명(용도)");
+
+        List<List<Object>> dataList = new ArrayList<>();
+        for (IpCidrResponse cidr : cidrPage.getContent()) {
+            dataList.add(Arrays.asList(
+                    cidr.getCidrBlock(),
+                    cidr.getDescription() != null ? cidr.getDescription() : "-"));
+        }
+
+        ExcelUtil.download(response, "AKIMS_IP대역_목록", headers, dataList);
+        log.info("IP 대역 엑셀 다운로드 완료 (총 {}건)", dataList.size());
+    }
+
+    // ==========================================
+    // 4. 엑셀 일괄 업로드 (IP CIDR)
+    // ==========================================
+    @Transactional
+    public int uploadExcelIpCidr(MultipartFile file) throws Exception {
+        log.info("IP 대역 엑셀 업로드 시작");
+        List<List<String>> excelData = ExcelUtil.readExcel(file);
+        int successCount = 0;
+
+        // i=1 (0번 인덱스는 헤더이므로 스킵)
+        for (int i = 1; i < excelData.size(); i++) {
+            List<String> row = excelData.get(i);
+
+            // 데이터가 비정상적이거나 CIDR(1번 열)이 비어있으면 스킵
+            if (row.size() < 2 || row.get(1).trim().isEmpty())
+                continue;
+
+            try {
+                String cidrBlock = row.get(0).trim();
+
+                // 🌟 [추가된 방어 로직] CIDR 형식 엄격 검증
+                if (!isValidCidrFormat(cidrBlock)) {
+                    log.error("엑셀 업로드 스킵 - 잘못된 CIDR 형식 (행: {}, 입력값: {})", i + 1, cidrBlock);
+                    continue; // 잘못된 형식이면 시스템에 넣지 않고 스킵
+                }
+
+                // [예외 방어] 이미 등록된 대역이면 무시하고 다음 행으로 진행
+                if (ipCidrRepository.existsByCidrBlock(cidrBlock)) {
+                    log.warn("엑셀 업로드 스킵 - 이미 존재하는 대역: {}", cidrBlock);
+                    continue;
+                }
+
+                String description = row.size() > 1 ? row.get(1).trim() : "";
+
+                // Service 내부이므로 DTO를 거치지 않고 바로 안전하게 엔티티 생성 및 영속화
+                IpCidr ipCidr = IpCidr.builder()
+                        .cidrBlock(cidrBlock)
+                        .description(description)
+                        .build();
+
+                ipCidrRepository.save(ipCidr);
+                successCount++;
+
+            } catch (Exception e) {
+                log.error("엑셀 {}번째 행({}) 파싱 실패: {}", i + 1, row.get(1), e.getMessage());
+            }
+        }
+        return successCount;
+    }
+
+    // ==========================================
+    // 💡 내부 헬퍼 메서드: CIDR 정규식 검증
+    // ==========================================
+    private boolean isValidCidrFormat(String cidr) {
+        // IPv4 주소 (0.0.0.0 ~ 255.255.255.255) + "/" + 서브넷 마스크 (0~32) 를 완벽하게 잡아내는 정규식
+        String regex = "^((25[0-5]|2[0-4]\\d|[01]?\\d\\d?)\\.){3}(25[0-5]|2[0-4]\\d|[01]?\\d\\d?)/(3[0-2]|[1-2]?\\d)$";
+        return cidr != null && cidr.matches(regex);
     }
 }

@@ -23,6 +23,7 @@ public class NetworkDeviceResponse {
     // 조인된 하드웨어 및 위치 정보
     private Long hardwareId;
     private String hardwareModel;
+    private String serialNo;
     private String locationName;
     private String rackNo;
 
@@ -42,6 +43,7 @@ public class NetworkDeviceResponse {
         if (device.getHardware() != null) {
             this.hardwareId = device.getHardware().getId();
             this.hardwareModel = device.getHardware().getModel();
+            this.serialNo = device.getHardware().getSerialNo();
             if (device.getHardware().getRack() != null) {
                 this.rackNo = device.getHardware().getRack().getRackNo();
                 this.locationName = device.getHardware().getRack().getLocation().getName();

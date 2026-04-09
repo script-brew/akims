@@ -1,34 +1,44 @@
 package com.akplaza.infra.domain.device.service;
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.Map;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 
 import com.akplaza.infra.domain.device.dto.NetworkDeviceCreateRequest;
 import com.akplaza.infra.domain.device.dto.NetworkDeviceResponse;
 import com.akplaza.infra.domain.device.dto.NetworkDeviceUpdateRequest;
-import com.akplaza.infra.domain.device.dto.ServerResponse;
 import com.akplaza.infra.domain.device.entity.NetworkDevice;
-import com.akplaza.infra.domain.device.entity.Server;
+import com.akplaza.infra.domain.device.entity.NetworkDeviceCategory;
 import com.akplaza.infra.domain.device.repository.NetworkDeviceRepository;
-import com.akplaza.infra.domain.hardware.dto.HardwareResponse;
 import com.akplaza.infra.domain.hardware.entity.Hardware;
 import com.akplaza.infra.domain.hardware.repository.HardwareRepository;
 import com.akplaza.infra.domain.network.dto.IpAssignRequest;
 import com.akplaza.infra.domain.network.entity.AssignedType;
 import com.akplaza.infra.domain.network.entity.Ip;
+import com.akplaza.infra.domain.network.entity.IpCidr;
+import com.akplaza.infra.domain.network.repository.IpCidrRepository;
 import com.akplaza.infra.domain.network.repository.IpRepository;
 import com.akplaza.infra.domain.network.service.IpService;
 import com.akplaza.infra.global.error.exception.DuplicateResourceException;
 import com.akplaza.infra.global.error.exception.ResourceNotFoundException;
+
+import jakarta.servlet.http.HttpServletResponse;
+
 import com.akplaza.infra.global.common.repository.DynamicSearchSpec;
+import com.akplaza.infra.global.common.util.ExcelUtil;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -43,6 +53,7 @@ public class NetworkDeviceService {
     private final HardwareRepository hardwareRepository;
     private final IpService ipService; // IP 할당/해제 연동
     private final IpRepository ipRepository; // 조회용
+    private final IpCidrRepository ipCidrRepository;
 
     // ==========================================
     // 1. 장비 생성 (CREATE)
@@ -216,6 +227,111 @@ public class NetworkDeviceService {
     }
 
     // ==========================================
+    // 5. 엑셀 다운로드 (Excel Download)
+    // ==========================================
+    public void downloadExcel(Map<String, String> searchParams, HttpServletResponse response) throws IOException {
+        log.info("네트워크 장비 엑셀 다운로드 시작");
+
+        // 미리 구현된 전체 조회 (N+1 최적화 적용됨) 사용
+        PageRequest maxPageRequest = PageRequest.of(0, 10000, Sort.by("id").descending());
+        Page<NetworkDeviceResponse> networkDevicePage = this.searchNetworkDevices(searchParams, maxPageRequest);
+
+        // 엑셀 헤더 정의
+        List<String> headers = Arrays.asList(
+                "위치", "분류", "H/W", "장비명", "설명", "OS", "IP", "HA");
+
+        List<List<Object>> dataList = new ArrayList<>();
+        for (NetworkDeviceResponse device : networkDevicePage.getContent()) {
+            String ipStr = device.getIps() != null
+                    ? device.getIps().stream().map(IpAssignRequest::getIpAddress).collect(Collectors.joining("\n"))
+                    : "";
+
+            dataList.add(Arrays.asList(
+                    device.getLocationName() != null ? device.getLocationName() : "-",
+                    device.getCategory(), device.getSerialNo() != null ? device.getSerialNo() : "-",
+                    device.getName(), device.getDescription() != null ? device.getDescription() : "",
+                    device.getOs(),
+                    ipStr,
+                    device.isHa() ? "O" : "X", device.getMonitoringInfo()));
+        }
+        ExcelUtil.download(response, "NetworkDevice_List", headers, dataList);
+        log.info("네트워크 장비 엑셀 다운로드 완료 (총 {}건)", dataList.size());
+    }
+
+    // ==========================================
+    // 6. 엑셀 업로드 (Excel Upload)
+    // ==========================================
+    @Transactional
+    public int uploadExcel(MultipartFile file) throws IOException {
+        log.info("네트워크 장비 엑셀 업로드 처리 시작");
+        List<List<String>> excelData = ExcelUtil.readExcel(file);
+
+        int successCount = 0;
+
+        List<Hardware> allHardware = hardwareRepository.findAll();
+        List<IpCidr> allCidrs = ipCidrRepository.findAll();
+
+        for (int i = 1; i < excelData.size(); i++) {
+            List<String> row = excelData.get(i);
+            if (row.size() < 5 || row.get(3).trim().isEmpty())
+                continue;
+
+            log.debug("데이터 확인: {} {} {} {} {} {}", row.get(0), row.get(1), row.get(2), row.get(3), row.get(4),
+                    row.get(5), row.get(6), row.get(7));
+            try {
+                String name = row.get(3).trim();
+                NetworkDeviceCategory category = NetworkDeviceCategory.valueOf(row.get(1).trim());
+                String serialNo = row.get(2).trim();
+                Long hardwareId = null;
+
+                if (!serialNo.equals("-") && !serialNo.isEmpty()) {
+                    Hardware hw = allHardware.stream().filter(h -> h.getSerialNo().equals(serialNo)).findFirst()
+                            .orElse(null);
+                    if (hw != null) {
+                        hardwareId = hw.getId();
+                    }
+                }
+
+                String os = row.get(5).trim();
+                String desc = row.get(4).trim();
+
+                // IP 파싱
+                List<IpAssignRequest> ipReqs = new ArrayList<>();
+                if (!row.get(6).isEmpty()) {
+                    for (String ip : row.get(6).split("\n")) {
+                        ip = ip.trim();
+                        if (ip.isEmpty() || ip.equals("-"))
+                            continue;
+                        Long cidrId = findMatchingCidrId(ip, allCidrs);
+                        if (cidrId != null)
+                            ipReqs.add(new IpAssignRequest(cidrId, ip));
+                    }
+                }
+                Boolean isHa = false;
+                if (row.get(7).toUpperCase().equals("O")) {
+                    isHa = true;
+                }
+
+                // 🌟 DTO 조립 및 저장
+                NetworkDeviceCreateRequest request = new NetworkDeviceCreateRequest();
+                request.setName(name);
+                request.setCategory(category);
+                request.setOs(os);
+                request.setHardwareId(hardwareId);
+                request.setDescription(desc);
+                request.setHa(isHa);
+                request.setIps(ipReqs);
+
+                this.createNetworkDevice(request); // 트랜잭션 내 자체 호출
+                successCount++;
+            } catch (Exception e) {
+                log.error("엑셀 {}번째 행({}) 파싱 실패: {}", i + 1, row.get(4), e.getMessage());
+            }
+        }
+        return successCount;
+    }
+
+    // ==========================================
     // 내부 헬퍼 메서드
     // ==========================================
     private Hardware validateAndGetHardware(Long hardwareId) {
@@ -227,5 +343,26 @@ public class NetworkDeviceService {
                     log.error("하드웨어 검증 실패 - 존재하지 않는 하드웨어 ID: {}", hardwareId);
                     return new ResourceNotFoundException("지정된 물리 하드웨어를 찾을 수 없습니다.");
                 });
+    }
+
+    // --- 내부 헬퍼 메서드 ---
+    private Long findMatchingCidrId(String ipAddr, List<IpCidr> allCidrs) {
+        for (IpCidr cidr : allCidrs) {
+            String[] parts = cidr.getCidrBlock().split("/");
+            if (parts.length != 2)
+                continue;
+            long ipInt = ipToLong(ipAddr);
+            long netInt = ipToLong(parts[0]);
+            long maskInt = (0xFFFFFFFFL << (32 - Integer.parseInt(parts[1]))) & 0xFFFFFFFFL;
+            if ((ipInt & maskInt) == (netInt & maskInt))
+                return cidr.getId();
+        }
+        return null;
+    }
+
+    private long ipToLong(String ip) {
+        String[] octets = ip.split("\\.");
+        return (Long.parseLong(octets[0]) << 24) | (Long.parseLong(octets[1]) << 16) | (Long.parseLong(octets[2]) << 8)
+                | Long.parseLong(octets[3]);
     }
 }

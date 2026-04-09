@@ -106,29 +106,33 @@ public class HardwareController {
     @GetMapping("/excel/download")
     public void downloadExcel(@RequestParam Map<String, String> searchParams, HttpServletResponse response)
             throws Exception {
-        // 페이징 없이 최대 10,000건 조회
-        PageRequest maxPageRequest = PageRequest.of(0, 10000, Sort.by("id").descending());
-        Page<HardwareResponse> hardwarePage = hardwareService.searchHardwares(searchParams, maxPageRequest);
+        // // 페이징 없이 최대 10,000건 조회
+        // PageRequest maxPageRequest = PageRequest.of(0, 10000,
+        // Sort.by("id").descending());
+        // Page<HardwareResponse> hardwarePage =
+        // hardwareService.searchHardwares(searchParams, maxPageRequest);
 
-        List<String> headers = Arrays.asList(
-                "위치", "랙 정보", "슬롯", "크기", "구분", "설명", "모델", "시리얼번호", "도입년도", "전원여부");
+        // List<String> headers = Arrays.asList(
+        // "위치", "랙 정보", "슬롯", "크기", "구분", "설명", "모델", "시리얼번호", "도입년도", "전원여부");
 
-        List<List<Object>> dataList = new ArrayList<>();
-        for (HardwareResponse hw : hardwarePage.getContent()) {
-            dataList.add(Arrays.asList(
-                    hw.getLocationName() != null ? hw.getLocationName() : "-",
-                    hw.getRackNo() != null ? hw.getRackNo() : "-",
-                    hw.getRackPosition(),
-                    hw.getSize(),
-                    hw.getEquipmentType(),
-                    hw.getDescription(),
-                    hw.getModel(),
-                    hw.getSerialNo(),
-                    hw.getIntroductionYear(),
-                    // 전원여부는 A/B 라인 상태를 요약해서 표시
-                    hw.getIsSinglePower() ? hw.getPowerLine() : "O"));
-        }
-        ExcelUtil.download(response, "AKIMS_하드웨어_자산대장", headers, dataList);
+        // List<List<Object>> dataList = new ArrayList<>();
+        // for (HardwareResponse hw : hardwarePage.getContent()) {
+        // dataList.add(Arrays.asList(
+        // hw.getLocationName() != null ? hw.getLocationName() : "-",
+        // hw.getRackNo() != null ? hw.getRackNo() : "-",
+        // hw.getRackPosition(),
+        // hw.getSize(),
+        // hw.getEquipmentType(),
+        // hw.getDescription(),
+        // hw.getModel(),
+        // hw.getSerialNo(),
+        // hw.getIntroductionYear(),
+        // // 전원여부는 A/B 라인 상태를 요약해서 표시
+        // hw.getIsSinglePower() ? hw.getPowerLine() : "O"));
+        // }
+        // ExcelUtil.download(response, "AKIMS_하드웨어_자산대장", headers, dataList);
+        log.info("Hardware API: 엑셀 다운로드 요청");
+        hardwareService.downloadExcel(searchParams, response);
     }
 
     // ==========================================
@@ -136,55 +140,67 @@ public class HardwareController {
     // ==========================================
     @PostMapping("/excel/upload")
     public ResponseEntity<Map<String, String>> uploadExcel(@RequestParam("file") MultipartFile file) {
+        // try {
+        // List<List<String>> excelData = ExcelUtil.readExcel(file);
+        // int successCount = 0;
+
+        // // 랙 전체 목록 캐싱 (텍스트 매핑용)
+        // List<Rack> allRacks = rackRepository.findAll();
+
+        // for (int i = 1; i < excelData.size(); i++) {
+        // List<String> row = excelData.get(i);
+        // if (row.size() < 7 || row.get(6).trim().isEmpty())
+        // continue; // 시리얼번호(6번) 필수
+
+        // try {
+        // HardwareCreateRequest request = new HardwareCreateRequest();
+
+        // // [1] 랙 정보 -> Rack ID 매핑 (위치와 랙번호 조합으로 찾음)
+        // String rackNoStr = row.get(1).trim();
+        // Rack matchedRack = allRacks.stream()
+        // .filter(r -> r.getRackNo().equals(rackNoStr))
+        // .findFirst().orElse(null);
+
+        // if (matchedRack != null)
+        // request.setRackId(matchedRack.getId());
+
+        // request.setRackPosition(Integer.parseInt(row.get(2))); // [2] 슬롯
+        // request.setSize(Integer.parseInt(row.get(3))); // [3] 크기
+        // request.setEquipmentType(EquipmentType.valueOf(row.get(4).toUpperCase())); //
+        // [4] 구분
+        // request.setDescription(row.get(5)); // [5] 설명
+        // request.setModel(row.get(6)); // [6] 모델
+        // request.setSerialNo(row.get(7).trim()); // [7] 시리얼번호
+        // request.setIntroductionYear(Integer.parseInt(row.get(8))); // [8] 도입년도
+
+        // // [9] 전원여부 파싱 (예: "A:ON / B:OFF" 형태일 경우)
+        // if (row.get(9).toUpperCase().equals("O")) {
+        // request.setIsSinglePower(false);
+        // } else {
+        // request.setIsSinglePower(true);
+        // request.setPowerLine(row.get(9).toUpperCase());
+        // }
+
+        // hardwareService.createHardware(request);
+        // successCount++;
+        // } catch (Exception e) {
+        // // 개별 행 오류 시 로그 남기고 계속 진행
+        // }
+        // }
+        // return ResponseEntity.ok(Map.of("message", "총 " + successCount + "건의 하드웨어가
+        // 등록되었습니다."));
+        // } catch (Exception e) {
+        // return ResponseEntity.status(500).body(Map.of("message", "엑셀 처리 실패: " +
+        // e.getMessage()));
+        // }
+        log.info("Hardware API: 엑셀 업로드 요청");
         try {
-            List<List<String>> excelData = ExcelUtil.readExcel(file);
-            int successCount = 0;
-
-            // 랙 전체 목록 캐싱 (텍스트 매핑용)
-            List<Rack> allRacks = rackRepository.findAll();
-
-            for (int i = 1; i < excelData.size(); i++) {
-                List<String> row = excelData.get(i);
-                if (row.size() < 7 || row.get(6).trim().isEmpty())
-                    continue; // 시리얼번호(6번) 필수
-
-                try {
-                    HardwareCreateRequest request = new HardwareCreateRequest();
-
-                    // [1] 랙 정보 -> Rack ID 매핑 (위치와 랙번호 조합으로 찾음)
-                    String rackNoStr = row.get(1).trim();
-                    Rack matchedRack = allRacks.stream()
-                            .filter(r -> r.getRackNo().equals(rackNoStr))
-                            .findFirst().orElse(null);
-
-                    if (matchedRack != null)
-                        request.setRackId(matchedRack.getId());
-
-                    request.setRackPosition(Integer.parseInt(row.get(2))); // [2] 슬롯
-                    request.setSize(Integer.parseInt(row.get(3))); // [3] 크기
-                    request.setEquipmentType(EquipmentType.valueOf(row.get(4).toUpperCase())); // [4] 구분
-                    request.setDescription(row.get(5)); // [5] 설명
-                    request.setModel(row.get(6)); // [6] 모델
-                    request.setSerialNo(row.get(7).trim()); // [7] 시리얼번호
-                    request.setIntroductionYear(Integer.parseInt(row.get(8))); // [8] 도입년도
-
-                    // [9] 전원여부 파싱 (예: "A:ON / B:OFF" 형태일 경우)
-                    if (row.get(9).toUpperCase().equals("O")) {
-                        request.setIsSinglePower(false);
-                    } else {
-                        request.setIsSinglePower(true);
-                        request.setPowerLine(row.get(9).toUpperCase());
-                    }
-
-                    hardwareService.createHardware(request);
-                    successCount++;
-                } catch (Exception e) {
-                    // 개별 행 오류 시 로그 남기고 계속 진행
-                }
-            }
+            int successCount = hardwareService.uploadExcel(file);
             return ResponseEntity.ok(Map.of("message", "총 " + successCount + "건의 하드웨어가 등록되었습니다."));
         } catch (Exception e) {
-            return ResponseEntity.status(500).body(Map.of("message", "엑셀 처리 실패: " + e.getMessage()));
+            log.error("엑셀 처리 실패: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("message", "엑셀 처리 실패: " + e.getMessage()));
         }
     }
 }

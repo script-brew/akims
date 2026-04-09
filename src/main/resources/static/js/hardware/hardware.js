@@ -223,10 +223,10 @@ function setupEventListeners() {
       const result = await response.json();
 
       if (response.ok) {
-        alert(response.message);
+        alert(result.message);
         loadHardwares(); // 업로드 성공 후 목록 새로고침
       } else {
-        alert("엑셀 업로드 실패:\n" + response.message);
+        alert("엑셀 업로드 실패:\n" + result.message);
       }
     } catch (error) {
       console.error("엑셀 업로드 에러", error);

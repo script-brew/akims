@@ -16,14 +16,19 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 import com.akplaza.infra.domain.network.dto.IpCidrCreateRequest;
 import com.akplaza.infra.domain.network.dto.IpCidrDetailResponse;
 import com.akplaza.infra.domain.network.dto.IpCidrResponse;
+import com.akplaza.infra.domain.network.dto.IpResponse;
+import com.akplaza.infra.domain.network.entity.AssignedType;
 import com.akplaza.infra.domain.network.service.IpService;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -77,5 +82,39 @@ public class IpCidrController {
     public ResponseEntity<Void> deleteIpCidr(@PathVariable Long id) {
         ipService.deleteIpCidr(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @Operation(summary = "특정 장비의 IP 목록 조회", description = "서버 또는 네트워크 장비에 할당된 IP 목록을 조회합니다.")
+    @GetMapping("/target")
+    public ResponseEntity<List<IpResponse>> getIpsByTarget(
+            @Parameter(description = "대상 타입 (SERVER, NETWORK_DEVICE, VIP 등)", required = true) @RequestParam AssignedType type,
+
+            @Parameter(description = "대상의 ID (서버 ID 또는 네트워크 장비 ID)", required = true) @RequestParam Long targetId) {
+
+        log.debug("Ip API: 타겟 기반 IP 조회 요청 - Type: {}, Target ID: {}", type, targetId);
+        List<IpResponse> responses = ipService.getIpsByTarget(type, targetId);
+        return ResponseEntity.ok(responses);
+    }
+
+    @Operation(summary = "IP 대역 목록 엑셀 다운로드", description = "검색된 IP 대역 목록을 엑셀 파일로 다운로드합니다.")
+    @GetMapping("/excel/download")
+    public void downloadExcel(@RequestParam Map<String, String> searchParams, HttpServletResponse response)
+            throws Exception {
+        log.info("IpCidr API: 엑셀 다운로드 요청");
+        ipService.downloadExcelIpCidr(searchParams, response);
+    }
+
+    @Operation(summary = "IP 대역 대량 업로드", description = "엑셀 파일을 업로드하여 여러 개의 IP 대역을 일괄 등록합니다.")
+    @PostMapping("/excel/upload")
+    public ResponseEntity<Map<String, String>> uploadExcel(@RequestParam("file") MultipartFile file) {
+        log.info("IpCidr API: 엑셀 업로드 요청");
+        try {
+            int successCount = ipService.uploadExcelIpCidr(file);
+            return ResponseEntity.ok(Map.of("message", "총 " + successCount + "건의 IP 대역이 성공적으로 등록되었습니다."));
+        } catch (Exception e) {
+            log.error("엑셀 처리 실패: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("message", "엑셀 처리 실패: " + e.getMessage()));
+        }
     }
 }

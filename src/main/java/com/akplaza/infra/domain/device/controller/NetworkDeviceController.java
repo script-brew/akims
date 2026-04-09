@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -26,6 +27,7 @@ import com.akplaza.infra.domain.device.service.NetworkDeviceService;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -92,5 +94,27 @@ public class NetworkDeviceController {
         log.info("NetworkDevice API: 삭제 요청 - ID: {}", id);
         networkDeviceService.deleteNetworkDevice(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @Operation(summary = "서버 목록 엑셀 다운로드", description = "검색 조건에 맞는 네트워크 장비 목록을 엑셀 파일로 다운로드합니다.")
+    @GetMapping("/excel/download")
+    public void downloadExcel(@RequestParam Map<String, String> searchParams, HttpServletResponse response)
+            throws Exception {
+        log.info("NetworkDevice API: 엑셀 다운로드 요청");
+        networkDeviceService.downloadExcel(searchParams, response);
+    }
+
+    @Operation(summary = "네트워크 장비 대량 업로드")
+    @PostMapping("/excel/upload")
+    public ResponseEntity<Map<String, String>> uploadExcel(@RequestParam("file") MultipartFile file) {
+        log.info("NetworkDevice API: 엑셀 업로드 요청");
+        try {
+            int successCount = networkDeviceService.uploadExcel(file);
+            return ResponseEntity.ok(Map.of("message", "총 " + successCount + "건의 네트워크 장비가 일괄 등록되었습니다."));
+        } catch (Exception e) {
+            log.error("엑셀 처리 실패: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("message", "엑셀 처리 실패: " + e.getMessage()));
+        }
     }
 }

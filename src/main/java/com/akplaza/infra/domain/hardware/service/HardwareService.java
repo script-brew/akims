@@ -1,13 +1,17 @@
 package com.akplaza.infra.domain.hardware.service;
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.Map;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 
 import com.akplaza.infra.domain.device.repository.NetworkDeviceRepository;
@@ -15,6 +19,7 @@ import com.akplaza.infra.domain.device.repository.ServerRepository;
 import com.akplaza.infra.domain.hardware.dto.HardwareCreateRequest;
 import com.akplaza.infra.domain.hardware.dto.HardwareResponse;
 import com.akplaza.infra.domain.hardware.dto.HardwareUpdateRequest;
+import com.akplaza.infra.domain.hardware.entity.EquipmentType;
 import com.akplaza.infra.domain.hardware.entity.Hardware;
 import com.akplaza.infra.domain.hardware.repository.HardwareRepository;
 import com.akplaza.infra.domain.space.entity.Rack;
@@ -22,12 +27,17 @@ import com.akplaza.infra.domain.space.repository.RackRepository;
 import com.akplaza.infra.global.error.exception.DuplicateResourceException;
 import com.akplaza.infra.global.error.exception.ResourceInUseException;
 import com.akplaza.infra.global.error.exception.ResourceNotFoundException;
+
+import jakarta.servlet.http.HttpServletResponse;
+
 import com.akplaza.infra.global.common.repository.DynamicSearchSpec;
+import com.akplaza.infra.global.common.util.ExcelUtil;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.data.domain.Sort;
 
 @Slf4j
 @Service
@@ -214,6 +224,78 @@ public class HardwareService {
 
         hardwareRepository.delete(hardware);
         log.info("하드웨어 삭제 트랜잭션 완료 - ID: {}", id);
+    }
+
+    // ==========================================
+    // 5. 엑셀 다운로드
+    // ==========================================
+    public void downloadExcel(Map<String, String> searchParams, HttpServletResponse response) throws Exception {
+        log.info("하드웨어 엑셀 다운로드 시작");
+        PageRequest maxPageRequest = PageRequest.of(0, 10000, Sort.by("id").descending());
+        Page<HardwareResponse> hardwarePage = this.searchHardwares(searchParams, maxPageRequest);
+
+        List<String> headers = Arrays.asList(
+                "위치", "랙 정보", "슬롯", "크기", "구분", "설명", "모델", "시리얼번호", "도입년도", "전원여부");
+
+        List<List<Object>> dataList = new ArrayList<>();
+        for (HardwareResponse hw : hardwarePage.getContent()) {
+            dataList.add(Arrays.asList(
+                    hw.getLocationName() != null ? hw.getLocationName() : "-",
+                    hw.getRackNo() != null ? hw.getRackNo() : "-",
+                    hw.getRackPosition(), hw.getSize(), hw.getEquipmentType(),
+                    hw.getDescription(), hw.getModel(), hw.getSerialNo(), hw.getIntroductionYear(),
+                    hw.getIsSinglePower() ? hw.getPowerLine() : "O"));
+        }
+        ExcelUtil.download(response, "AKIMS_하드웨어_자산대장", headers, dataList);
+    }
+
+    // ==========================================
+    // 6. 엑셀 업로드
+    // ==========================================
+    @Transactional
+    public int uploadExcel(MultipartFile file) throws Exception {
+        log.info("하드웨어 엑셀 업로드 시작");
+        List<List<String>> excelData = ExcelUtil.readExcel(file);
+        int successCount = 0;
+
+        List<Rack> allRacks = rackRepository.findAll();
+
+        for (int i = 1; i < excelData.size(); i++) {
+            List<String> row = excelData.get(i);
+            if (row.size() < 7 || row.get(6).trim().isEmpty())
+                continue;
+
+            try {
+                HardwareCreateRequest request = new HardwareCreateRequest();
+
+                String rackNoStr = row.get(1).trim();
+                Rack matchedRack = allRacks.stream().filter(r -> r.getRackNo().equals(rackNoStr)).findFirst()
+                        .orElse(null);
+                if (matchedRack != null)
+                    request.setRackId(matchedRack.getId());
+
+                request.setRackPosition(Integer.parseInt(row.get(2)));
+                request.setSize(Integer.parseInt(row.get(3)));
+                request.setEquipmentType(EquipmentType.valueOf(row.get(4).toUpperCase()));
+                request.setDescription(row.get(5));
+                request.setModel(row.get(6));
+                request.setSerialNo(row.get(7).trim());
+                request.setIntroductionYear(Integer.parseInt(row.get(8)));
+
+                if (row.get(9).toUpperCase().equals("O")) {
+                    request.setIsSinglePower(false);
+                } else {
+                    request.setIsSinglePower(true);
+                    request.setPowerLine(row.get(9).toUpperCase());
+                }
+
+                this.createHardware(request);
+                successCount++;
+            } catch (Exception e) {
+                log.error("엑셀 {}번째 하드웨어 행 파싱 실패: {}", i + 1, e.getMessage());
+            }
+        }
+        return successCount;
     }
 
     // ==========================================

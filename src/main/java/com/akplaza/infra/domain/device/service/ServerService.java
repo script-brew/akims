@@ -1,17 +1,26 @@
 package com.akplaza.infra.domain.device.service;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Arrays;
 import java.util.stream.Collectors;
 import java.util.Map;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
+import com.akplaza.infra.domain.device.dto.DiskRequest;
 import com.akplaza.infra.domain.device.dto.ServerCreateRequest;
 import com.akplaza.infra.domain.device.dto.ServerResponse;
 import com.akplaza.infra.domain.device.dto.ServerUpdateRequest;
 import com.akplaza.infra.domain.device.entity.Server;
+import com.akplaza.infra.domain.device.entity.ServerBackup;
+import com.akplaza.infra.domain.device.entity.ServerCategory;
+import com.akplaza.infra.domain.device.entity.ServerMonitoring;
+import com.akplaza.infra.domain.device.entity.Environment;
 import com.akplaza.infra.domain.device.entity.Disk;
+import com.akplaza.infra.domain.device.entity.DiskType;
 import com.akplaza.infra.domain.device.entity.ServerSpec;
 import com.akplaza.infra.domain.device.entity.ServerType;
 import com.akplaza.infra.domain.device.repository.ServerRepository;
@@ -22,19 +31,28 @@ import com.akplaza.infra.domain.hardware.repository.HardwareRepository;
 import com.akplaza.infra.domain.network.dto.IpAssignRequest;
 import com.akplaza.infra.domain.network.entity.AssignedType;
 import com.akplaza.infra.domain.network.entity.Ip;
+import com.akplaza.infra.domain.network.entity.IpCidr;
+import com.akplaza.infra.domain.network.repository.IpCidrRepository;
 import com.akplaza.infra.domain.network.repository.IpRepository;
 import com.akplaza.infra.domain.network.service.IpService;
+import com.akplaza.infra.domain.software.dto.SoftwareRequest;
 import com.akplaza.infra.domain.software.entity.Software;
 import com.akplaza.infra.domain.software.repository.SoftwareRepository;
 import com.akplaza.infra.domain.software.service.SoftwareService;
 import com.akplaza.infra.global.error.exception.DuplicateResourceException;
 import com.akplaza.infra.global.error.exception.ResourceNotFoundException;
+
+import jakarta.servlet.http.HttpServletResponse;
+
 import com.akplaza.infra.global.common.repository.DynamicSearchSpec;
+import com.akplaza.infra.global.common.util.ExcelUtil;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.data.domain.Sort;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -47,6 +65,7 @@ public class ServerService {
 
     private final ServerRepository serverRepository;
     private final HardwareRepository hardwareRepository;
+    private final IpCidrRepository ipCidrRepository;
     private final IpService ipService; // IP 할당/해제 비즈니스 로직 호출용
     private final IpRepository ipRepository; // 조회용
     private final DiskService diskService; // 디스크 할당용
@@ -261,6 +280,173 @@ public class ServerService {
         log.info("서버 삭제 트랜잭션 완료 - ID: {}", id);
     }
 
+    // ==========================================
+    // 5. 엑셀 다운로드
+    // ==========================================
+    public void downloadExcel(Map<String, String> searchParams, HttpServletResponse response) throws Exception {
+        log.info("서버 장비 엑셀 다운로드 시작");
+        PageRequest maxPageRequest = PageRequest.of(0, 10000, Sort.by("id").descending());
+        Page<ServerResponse> serverPage = this.searchServers(searchParams, maxPageRequest);
+
+        List<String> headers = Arrays.asList(
+                "위치", "분류", "H/W", "용도", "서버명", "설명", "운영체제(Version)",
+                "IP", "CPU", "Memory", "Disk", "Softwares", "백업", "HA", "모니터링");
+
+        List<List<Object>> dataList = new ArrayList<>();
+        for (ServerResponse srv : serverPage.getContent()) {
+            String ipStr = srv.getIps() != null
+                    ? srv.getIps().stream().map(IpAssignRequest::getIpAddress).collect(Collectors.joining("\n"))
+                    : "";
+            String diskStr = srv.getDisks() != null ? srv.getDisks().stream()
+                    .map(d -> d.getDiskType() + "(" + d.getSize() + "GB, " + d.getMountPoint() + ")")
+                    .collect(Collectors.joining("\n")) : "";
+            String swStr = srv.getSoftwares() != null ? srv.getSoftwares().stream()
+                    .map(s -> s.getName() + " " + (s.getVersion() != null ? s.getVersion() : ""))
+                    .collect(Collectors.joining("\n")) : "";
+
+            dataList.add(Arrays.asList(
+                    srv.getLocationName() != null ? srv.getLocationName() : "-",
+                    srv.getServerCategory(), srv.getSerialNo() != null ? srv.getSerialNo() : "-", srv.getEnvironment(),
+                    srv.getHostName(), srv.getDescription() != null ? srv.getDescription() : "", srv.getOs(),
+                    ipStr, srv.getCpuCore(), srv.getMemoryGb(), diskStr, swStr, srv.getBackupInfo(),
+                    srv.isHa() ? "O" : "X", srv.getMonitoringInfo()));
+        }
+        ExcelUtil.download(response, "AKIMS_서버대장_추출", headers, dataList);
+    }
+
+    // ==========================================
+    // 6. 엑셀 일괄 업로드
+    // ==========================================
+    @Transactional
+    public int uploadExcel(MultipartFile file) throws Exception {
+        log.info("서버 장비 엑셀 업로드 시작");
+        List<List<String>> excelData = ExcelUtil.readExcel(file);
+        int successCount = 0;
+
+        List<Hardware> allHardware = hardwareRepository.findAll();
+        List<IpCidr> allCidrs = ipCidrRepository.findAll();
+
+        for (int i = 1; i < excelData.size(); i++) {
+            List<String> row = excelData.get(i);
+            if (row.size() < 5 || row.get(4).trim().isEmpty())
+                continue;
+
+            try {
+                String hostName = row.get(4).trim();
+                ServerCategory category = ServerCategory.valueOf(row.get(1).toUpperCase());
+                Environment env = Environment.valueOf(row.get(3).toUpperCase());
+                String serialNo = row.get(2).trim();
+                Long hardwareId = null;
+                ServerType serverType = ServerType.VIRTUAL;
+
+                if (!serialNo.equals("-") && !serialNo.isEmpty()) {
+                    Hardware hw = allHardware.stream().filter(h -> h.getSerialNo().equals(serialNo)).findFirst()
+                            .orElse(null);
+                    if (hw != null) {
+                        hardwareId = hw.getId();
+                        serverType = ServerType.PHYSICAL;
+                    }
+                }
+
+                String os = row.get(6).trim();
+                String desc = row.get(5).trim();
+                double cpu = row.get(8).isEmpty() ? 1.0 : Double.parseDouble(row.get(8));
+                double mem = row.get(9).isEmpty() ? 1.0 : Double.parseDouble(row.get(9));
+                boolean isHa = row.get(13).equalsIgnoreCase("O");
+                ServerBackup backupStr = ServerBackup.valueOf(row.get(12).isEmpty() ? "NO_BACKUP" : row.get(12));
+                ServerMonitoring monStr = ServerMonitoring
+                        .valueOf(row.get(12).isEmpty() ? "NO_MONITORING" : row.get(12));
+
+                // IP 파싱
+                List<IpAssignRequest> ipReqs = new ArrayList<>();
+                if (!row.get(7).isEmpty()) {
+                    for (String ip : row.get(7).split("\n")) {
+                        ip = ip.trim();
+                        if (ip.isEmpty() || ip.equals("-"))
+                            continue;
+                        Long cidrId = findMatchingCidrId(ip, allCidrs);
+                        if (cidrId != null)
+                            ipReqs.add(new IpAssignRequest(cidrId, ip));
+                    }
+                }
+
+                // Disk 파싱
+                List<DiskRequest> diskReqs = new ArrayList<>();
+                if (!row.get(10).isEmpty()) {
+                    for (String d : row.get(10).split("\n")) {
+                        d = d.trim();
+                        if (d.isEmpty() || d.equals("-"))
+                            continue;
+                        DiskType type = DiskType.valueOf(d.substring(0, d.indexOf("(")).trim());
+                        String inner = d.substring(d.indexOf("(") + 1, d.indexOf(")"));
+                        String[] parts = inner.split(",");
+                        int size = Integer.parseInt(parts[0].replace("GB", "").trim());
+                        String mount = parts.length > 1 ? parts[1].trim() : "/";
+                        diskReqs.add(new DiskRequest(type, size, mount));
+                    }
+                }
+
+                // Software 파싱
+                List<SoftwareRequest> swReqs = new ArrayList<>();
+                if (!row.get(11).isEmpty()) {
+                    for (String s : row.get(11).split("\n")) {
+                        s = s.trim();
+                        if (s.isEmpty() || s.equals("-"))
+                            continue;
+                        int lastSpace = s.lastIndexOf(" ");
+                        String name = lastSpace > 0 ? s.substring(0, lastSpace).trim() : s;
+                        String version = lastSpace > 0 ? s.substring(lastSpace + 1).trim() : "";
+                        swReqs.add(new SoftwareRequest(name, version, "", ""));
+                    }
+                }
+
+                // 🌟 DTO 조립 및 저장
+                ServerCreateRequest request = new ServerCreateRequest();
+                request.setHostName(hostName);
+                request.setServerCategory(category);
+                request.setEnvironment(env);
+                request.setServerType(serverType);
+                request.setOs(os);
+                request.setCpuCore(cpu);
+                request.setMemoryGb(mem);
+                request.setHardwareId(hardwareId);
+                request.setDescription(desc);
+                request.setHa(isHa);
+                request.setBackupInfo(backupStr);
+                request.setMonitoringInfo(monStr);
+                request.setIps(ipReqs);
+                request.setDisks(diskReqs);
+                request.setSoftwares(swReqs);
+
+                this.createServer(request); // 트랜잭션 내 자체 호출
+                successCount++;
+            } catch (Exception e) {
+                log.error("엑셀 {}번째 행({}) 파싱 실패: {}", i + 1, row.get(4), e.getMessage());
+            }
+        }
+        return successCount;
+    }
+
+    // --- 내부 헬퍼 메서드 ---
+    private Long findMatchingCidrId(String ipAddr, List<IpCidr> allCidrs) {
+        for (IpCidr cidr : allCidrs) {
+            String[] parts = cidr.getCidrBlock().split("/");
+            if (parts.length != 2)
+                continue;
+            long ipInt = ipToLong(ipAddr);
+            long netInt = ipToLong(parts[0]);
+            long maskInt = (0xFFFFFFFFL << (32 - Integer.parseInt(parts[1]))) & 0xFFFFFFFFL;
+            if ((ipInt & maskInt) == (netInt & maskInt))
+                return cidr.getId();
+        }
+        return null;
+    }
+
+    private long ipToLong(String ip) {
+        String[] octets = ip.split("\\.");
+        return (Long.parseLong(octets[0]) << 24) | (Long.parseLong(octets[1]) << 16) | (Long.parseLong(octets[2]) << 8)
+                | Long.parseLong(octets[3]);
+    }
     // ==========================================
     // 내부 헬퍼 메서드
     // ==========================================

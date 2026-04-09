@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 import com.akplaza.infra.domain.network.dto.IpCreateRequest;
 import com.akplaza.infra.domain.network.dto.IpResponse;
@@ -23,6 +24,7 @@ import com.akplaza.infra.domain.network.service.IpService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -63,16 +65,4 @@ public class IpController {
     // List<IpResponse> responses = ipService.getAllIps();
     // return ResponseEntity.ok(responses);
     // }
-
-    @Operation(summary = "특정 장비의 IP 목록 조회", description = "서버 또는 네트워크 장비에 할당된 IP 목록을 조회합니다.")
-    @GetMapping("/target")
-    public ResponseEntity<List<IpResponse>> getIpsByTarget(
-            @Parameter(description = "대상 타입 (SERVER, NETWORK_DEVICE, VIP 등)", required = true) @RequestParam AssignedType type,
-
-            @Parameter(description = "대상의 ID (서버 ID 또는 네트워크 장비 ID)", required = true) @RequestParam Long targetId) {
-
-        log.debug("Ip API: 타겟 기반 IP 조회 요청 - Type: {}, Target ID: {}", type, targetId);
-        List<IpResponse> responses = ipService.getIpsByTarget(type, targetId);
-        return ResponseEntity.ok(responses);
-    }
 }

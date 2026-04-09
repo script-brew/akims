@@ -1,6 +1,8 @@
 import { api } from "../common/api.js";
 import { ui } from "../common/ui.js";
 
+import { Pagination } from "../common/pagination.js";
+
 // --- DOM Elements ---
 const locTableBody = document.getElementById("location-table-body");
 const visualContainer = document.getElementById("visual-rack-container");
@@ -21,6 +23,9 @@ const rackNo = document.getElementById("rack-no");
 const rackName = document.getElementById("rack-name");
 const rackU = document.getElementById("rack-u");
 const rackDesc = document.getElementById("rack-desc");
+const rackType = document.getElementById("rack-type");
+
+const rackCategoryFilter = document.getElementById("rack-category-filter");
 
 // --- State ---
 let locationList = [];
@@ -28,7 +33,22 @@ let rackList = [];
 let hardwareList = [];
 let currentLocationId = null; // 🌟 현재 시각화 모드로 열려있는 장소 ID
 
+// 🌟 추가된 필터 및 페이징 상태
+let currentRackPage = 0; // pagination.js는 0부터 시작하므로 0으로 초기화
+let currentRackCategory = "ALL";
+const RACKS_PER_PAGE = 2; // 1페이지당 2개씩
+let pagination; // 페이징 인스턴스 담을 변수
+
 document.addEventListener("DOMContentLoaded", async () => {
+  pagination = new Pagination(
+    document.querySelector("#rack-pagination .pagination-container"),
+    (pageNo) => {
+      // 페이지 버튼 클릭 시 실행될 콜백
+      currentRackPage = pageNo;
+      renderVisualRacks();
+    }
+  );
+
   await loadAllData();
   setupEventListeners();
 });
@@ -94,57 +114,139 @@ window.viewVisualRacks = (locId) => {
 
   visualTitle.textContent = `[${loc.name}] 실장된 랙 및 장비 현황`;
 
-  if (locRacks.length === 0) {
-    rackGridArea.innerHTML = `<div style="padding: 50px; text-align: center; width: 100%; color: #7f8c8d; font-size: 1.1rem;">이 장소에는 아직 등록된 랙이 없습니다.<br>우측 상단의 '+ 새 랙 추가' 버튼을 눌러주세요.</div>`;
-  } else {
-    // 각 랙별로 캐비닛 HTML을 생성하여 가로로 이어붙임
-    rackGridArea.innerHTML = locRacks
-      .map((rack) => {
-        const rackHws = hardwareList.filter((h) => h.rackId === rack.id);
-        const slotsHtml = generateRackSlotsHTML(rack, rackHws);
-
-        // 🌟 수정됨: 고정 너비(min-width)와 flex-shrink를 제거하고, 너비를 100%로 설정하여 그리드 칸에 맞춥니다.
-        return `
-                <div class="rack-cabinet-wrapper" style="width: 100%;">
-                    <div style="text-align:center; margin-bottom: 12px; padding: 10px; background: #f1f2f6; border-radius: 6px; border: 1px solid #dcdde1;">
-                        <div style="font-size: 1.2rem; font-weight: bold; color: #2c3e50;">${ui.escapeHtml(
-                          rack.rackNo
-                        )}</div>
-                        <div style="color: #7f8c8d; font-size: 0.9rem; margin-bottom: 10px;">${ui.escapeHtml(
-                          rack.name || "-"
-                        )} (${rack.size}U)</div>
-                        <div>
-                            <button class="btn small" style="background-color:#f39c12;" onclick="window.editRack(${
-                              rack.id
-                            })">수정</button>
-                            <button class="btn small danger" onclick="window.deleteRack(${
-                              rack.id
-                            })">삭제</button>
-                        </div>
-                    </div>
-                    
-                    <div style="display: flex; align-items: stretch; border: 12px solid #2c3e50; border-radius: 4px; background: #fff; box-shadow: 10px 10px 20px rgba(0,0,0,0.3);">
-                        <div style="width: 25px; background:rgb(255, 0, 0); display: flex; align-items: center; justify-content: center; border-right: 2px solid #1a252f;">
-                            <div style="color: #f1c40f; writing-mode: vertical-rl; font-weight: bold; font-size: 0.75rem; letter-spacing: 3px;">A</div>
-                        </div>
-
-                        <div class="rack-cabinet" style="flex: 1; padding: 5px 0;">
-                            ${slotsHtml}
-                        </div>
-
-                        <div style="width: 25px; background:rgb(0, 0, 255); display: flex; align-items: center; justify-content: center; border-left: 2px solid #1a252f;">
-                            <div style="color: #f1c40f; writing-mode: vertical-rl; font-weight: bold; font-size: 0.75rem; letter-spacing: 3px;">B</div>
-                        </div>
-                    </div>
-                </div>
-            `;
-      })
-      .join("");
-  }
+  // 상태 초기화
+  // currentRackPage = 0;
+  // currentRackCategory = "ALL";
+  // document.getElementById("rack-category-filter").value = "ALL";
 
   visualContainer.style.display = "block";
   visualContainer.scrollIntoView({ behavior: "smooth", block: "start" });
+
+  renderVisualRacks(); // 실제 렌더링 호출
 };
+
+// 2) 필터 및 페이징이 적용된 실제 렌더링 함수
+function renderVisualRacks() {
+  if (!currentLocationId) return;
+
+  // 1. 현재 장소의 랙 필터링
+  let locRacks = rackList.filter((r) => r.locationId === currentLocationId);
+
+  // 2. 카테고리 필터링 (SERVER / NETWORK)
+  if (currentRackCategory !== "ALL") {
+    locRacks = locRacks.filter((rack) => rack.rackType === currentRackCategory);
+  }
+
+  // 데이터가 없을 경우
+  if (locRacks.length === 0) {
+    rackGridArea.innerHTML = `<div style="padding: 50px; text-align: center; width: 100%; color: #7f8c8d; font-size: 1.1rem; grid-column: span 2;">해당 조건에 맞는 랙이 없습니다.</div>`;
+    document.getElementById("rack-pagination-area").innerHTML = "";
+    return;
+  }
+
+  // 3. 배열 자르기 (1페이지에 2개씩)
+  const startIndex = currentRackPage * RACKS_PER_PAGE;
+  const slicedRacks = locRacks.slice(startIndex, startIndex + RACKS_PER_PAGE);
+
+  // 4. HTML 렌더링 (기존 선생님의 HTML 구조와 스타일을 100% 동일하게 유지)
+  rackGridArea.innerHTML = slicedRacks
+    .map((rack) => {
+      const rackHws = hardwareList.filter((h) => h.rackId === rack.id);
+      const slotsHtml = generateRackSlotsHTML(rack, rackHws); // 기존 함수 그대로 호출
+
+      return `
+        <div class="rack-cabinet-wrapper" style="width: 100%;">
+            <div style="text-align:center; margin-bottom: 12px; padding: 10px; background: #f1f2f6; border-radius: 6px; border: 1px solid #dcdde1;">
+                <div style="font-size: 1.2rem; font-weight: bold; color: #2c3e50;">${ui.escapeHtml(
+                  rack.rackNo
+                )}</div>
+                <div style="color: #7f8c8d; font-size: 0.9rem; margin-bottom: 10px;">${ui.escapeHtml(
+                  rack.name || "-"
+                )} (${rack.size}U)</div>
+                <div>
+                    <button class="btn small" style="background-color:#f39c12;" onclick="window.editRack(${
+                      rack.id
+                    })">수정</button>
+                    <button class="btn small danger" onclick="window.deleteRack(${
+                      rack.id
+                    })">삭제</button>
+                </div>
+            </div>
+            
+            <div style="display: flex; align-items: stretch; border: 12px solid #2c3e50; border-radius: 4px; background: #fff; box-shadow: 10px 10px 20px rgba(0,0,0,0.3);">
+                <div style="width: 25px; background:rgb(255, 0, 0); display: flex; align-items: center; justify-content: center; border-right: 2px solid #1a252f;">
+                    <div style="color: #f1c40f; writing-mode: vertical-rl; font-weight: bold; font-size: 0.75rem; letter-spacing: 3px;">A</div>
+                </div>
+
+                <div class="rack-cabinet" style="flex: 1; padding: 5px 0;">
+                    ${slotsHtml}
+                </div>
+
+                <div style="width: 25px; background:rgb(0, 0, 255); display: flex; align-items: center; justify-content: center; border-left: 2px solid #1a252f;">
+                    <div style="color: #f1c40f; writing-mode: vertical-rl; font-weight: bold; font-size: 0.75rem; letter-spacing: 3px;">B</div>
+                </div>
+            </div>
+        </div>
+    `;
+    })
+    .join("");
+
+  // 5. 하단 페이징 버튼 생성
+  const totalPages = Math.ceil(locRacks.length / RACKS_PER_PAGE);
+  pagination.render(totalPages, currentRackPage);
+}
+
+//   if (locRacks.length === 0) {
+//     rackGridArea.innerHTML = `<div style="padding: 50px; text-align: center; width: 100%; color: #7f8c8d; font-size: 1.1rem;">이 장소에는 아직 등록된 랙이 없습니다.<br>우측 상단의 '+ 새 랙 추가' 버튼을 눌러주세요.</div>`;
+//   } else {
+//     // 각 랙별로 캐비닛 HTML을 생성하여 가로로 이어붙임
+//     rackGridArea.innerHTML = locRacks
+//       .map((rack) => {
+//         const rackHws = hardwareList.filter((h) => h.rackId === rack.id);
+//         const slotsHtml = generateRackSlotsHTML(rack, rackHws);
+
+//         // 🌟 수정됨: 고정 너비(min-width)와 flex-shrink를 제거하고, 너비를 100%로 설정하여 그리드 칸에 맞춥니다.
+//         return `
+//                 <div class="rack-cabinet-wrapper" style="width: 100%;">
+//                     <div style="text-align:center; margin-bottom: 12px; padding: 10px; background: #f1f2f6; border-radius: 6px; border: 1px solid #dcdde1;">
+//                         <div style="font-size: 1.2rem; font-weight: bold; color: #2c3e50;">${ui.escapeHtml(
+//                           rack.rackNo
+//                         )}</div>
+//                         <div style="color: #7f8c8d; font-size: 0.9rem; margin-bottom: 10px;">${ui.escapeHtml(
+//                           rack.name || "-"
+//                         )} (${rack.size}U)</div>
+//                         <div>
+//                             <button class="btn small" style="background-color:#f39c12;" onclick="window.editRack(${
+//                               rack.id
+//                             })">수정</button>
+//                             <button class="btn small danger" onclick="window.deleteRack(${
+//                               rack.id
+//                             })">삭제</button>
+//                         </div>
+//                     </div>
+
+//                     <div style="display: flex; align-items: stretch; border: 12px solid #2c3e50; border-radius: 4px; background: #fff; box-shadow: 10px 10px 20px rgba(0,0,0,0.3);">
+//                         <div style="width: 25px; background:rgb(255, 0, 0); display: flex; align-items: center; justify-content: center; border-right: 2px solid #1a252f;">
+//                             <div style="color: #f1c40f; writing-mode: vertical-rl; font-weight: bold; font-size: 0.75rem; letter-spacing: 3px;">A</div>
+//                         </div>
+
+//                         <div class="rack-cabinet" style="flex: 1; padding: 5px 0;">
+//                             ${slotsHtml}
+//                         </div>
+
+//                         <div style="width: 25px; background:rgb(0, 0, 255); display: flex; align-items: center; justify-content: center; border-left: 2px solid #1a252f;">
+//                             <div style="color: #f1c40f; writing-mode: vertical-rl; font-weight: bold; font-size: 0.75rem; letter-spacing: 3px;">B</div>
+//                         </div>
+//                     </div>
+//                 </div>
+//             `;
+//       })
+//       .join("");
+//   }
+
+//   visualContainer.style.display = "block";
+//   visualContainer.scrollIntoView({ behavior: "smooth", block: "start" });
+// };
 
 // 랙 슬롯 렌더링 헬퍼 함수 (기존 3단 그리드 로직)
 function generateRackSlotsHTML(targetRack, rackHwList) {
@@ -279,6 +381,7 @@ function setupEventListeners() {
       rackName.value = "";
       rackU.value = 42;
       rackDesc.value = "";
+      rackType.value = "SERVER";
       ui.openModal("rack-modal", "rack-modal-title", "새 랙(Rack) 추가");
     });
   document
@@ -289,6 +392,14 @@ function setupEventListeners() {
   document
     .getElementById("btn-close-hw-detail")
     .addEventListener("click", () => ui.closeModal("hw-detail-modal"));
+
+  rackCategoryFilter.addEventListener("change", () => {
+    currentRackCategory = rackCategoryFilter.value;
+    currentRackPage = 0; // 필터를 바꾸면 1페이지로 돌아감
+    renderVisualRacks();
+  });
+
+  // 체크박스 이벤트
   ui.setupCheckAll("check-all-loc", "loc-checkbox-item");
 }
 
@@ -338,6 +449,7 @@ async function saveRack() {
     name: rackName.value.trim(),
     size: parseInt(rackU.value),
     description: rackDesc.value.trim(),
+    rackType: rackType.value,
   };
   try {
     if (rackId.value) {
@@ -361,6 +473,7 @@ window.editRack = (id) => {
   rackName.value = target.name || "";
   rackU.value = target.size;
   rackDesc.value = target.description || "";
+  rackType.value = target.rackType;
   ui.openModal("rack-modal", "rack-modal-title", "랙(Rack) 수정");
 };
 

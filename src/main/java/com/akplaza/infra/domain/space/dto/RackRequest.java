@@ -1,5 +1,7 @@
 package com.akplaza.infra.domain.space.dto;
 
+import com.akplaza.infra.domain.space.entity.RackType;
+
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -24,4 +26,7 @@ public class RackRequest {
     private Integer size;
 
     private String description;
+
+    @NotNull(message = "랙의 타입을 선택해주세요.")
+    private RackType rackType;
 }

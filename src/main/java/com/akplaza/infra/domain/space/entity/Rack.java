@@ -3,7 +3,10 @@ package com.akplaza.infra.domain.space.entity;
 import com.akplaza.infra.global.common.entity.BaseTimeEntity;
 
 import jakarta.persistence.Column;
+import org.hibernate.annotations.ColumnDefault;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -43,20 +46,28 @@ public class Rack extends BaseTimeEntity {
     @Column
     private String description;
 
-    public void updateRackInfo(Location location, String rackNo, String name, Integer size, String description) {
+    @Enumerated(EnumType.STRING)
+    @ColumnDefault("'SERVER'")
+    @Column(length = 20, columnDefinition = "VARCHAR(50)")
+    private RackType rackType;
+
+    public void updateRackInfo(Location location, String rackNo, String name, Integer size, String description,
+            RackType rackType) {
         this.location = location;
         this.rackNo = rackNo;
         this.name = name;
         this.size = size;
         this.description = description;
+        this.rackType = rackType;
     }
 
     @Builder
-    public Rack(Location location, String rackNo, String name, Integer size, String description) {
+    public Rack(Location location, String rackNo, String name, Integer size, String description, RackType rackType) {
         this.location = location;
         this.rackNo = rackNo;
         this.name = name;
         this.size = size != null ? size : 42; // 기본값 42U
         this.description = description;
+        this.rackType = rackType;
     }
 }

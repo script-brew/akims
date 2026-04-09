@@ -43,6 +43,7 @@ let currentPage = 0;
 // --- Init ---
 document.addEventListener("DOMContentLoaded", async () => {
   const filterOptions = [
+    { value: "description", label: "하드웨어 정보" },
     { value: "model", label: "모델명" },
     { value: "serialNo", label: "시리얼 번호" },
   ];

@@ -85,6 +85,15 @@
               [장소명] 실장된 랙 뷰
             </h3>
             <div class="header-actions">
+              <select
+                id="rack-category-filter"
+                class="form-control"
+                style="width: 150px; margin-right: 10px; display: inline-block"
+              >
+                <option value="ALL">전체 랙 보기</option>
+                <option value="SERVER">서버 랙</option>
+                <option value="NETWORK">네트워크 랙</option>
+              </select>
               <button
                 id="btn-open-rack-modal"
                 class="btn"
@@ -99,7 +108,7 @@
             id="rack-grid-area"
             style="
               display: grid;
-              grid-template-columns: repeat(4, 1fr);
+              grid-template-columns: repeat(2, 1fr);
               gap: 40px;
               padding-bottom: 20px;
               align-items: flex-end;
@@ -107,6 +116,10 @@
             "
           ></div>
         </div>
+        <div
+          id="rack-pagination"
+          th:insert="~{components/pagination :: paginationFragment}"
+        ></div>
       </main>
     </div>
 
@@ -148,6 +161,15 @@
           </div>
           <div class="form-group">
             <label>랙 이름</label><input type="text" id="rack-name" />
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="rack-type">랙 타입 *</label>
+            <select id="rack-type">
+              <option value="SERVER">서버</option>
+              <option value="NETWORK">네트워크</option>
+            </select>
           </div>
         </div>
         <div class="form-row">

@@ -30,4 +30,8 @@ public interface HardwareRepository extends JpaRepository<Hardware, Long>, JpaSp
         // 🌟 랙별 하드웨어 개수를 한 번에 가져오는 최적화 쿼리
         @Query("SELECT h.rack.id, COUNT(h) FROM Hardware h WHERE h.rack IS NOT NULL GROUP BY h.rack.id")
         List<Object[]> countHardwareByRack();
+
+        // 🌟 랙별 하드웨어 개수를 한 번에 가져오는 최적화 쿼리
+        @Query("SELECT h.rack.id, COUNT(h) FROM Hardware h WHERE h.rack IS NOT NULL GROUP BY h.rack.id")
+        List<Object[]> countHardwareByRackId(Long Id);
 }

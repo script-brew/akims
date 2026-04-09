@@ -136,7 +136,8 @@ async function loadHardwares() {
           hw.equipmentType === "FIREWALL"
       )
       .map(
-        (hw) => `<option value="${hw.id}">[${hw.model}] ${hw.serialNo}</option>`
+        (hw) =>
+          `<option value="${hw.id}">[${hw.model}] ${hw.serialNo} (${hw.description})</option>`
       )
       .join("");
     selHardware.innerHTML =

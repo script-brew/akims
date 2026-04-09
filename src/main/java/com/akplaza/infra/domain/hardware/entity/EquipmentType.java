@@ -7,5 +7,6 @@ public enum EquipmentType {
     SAN, // SAN
     STORAGE, // 물리스토리지
     FIREWALL, // 방화벽
+    VPN, // VPN
     ETC // 기타
 }

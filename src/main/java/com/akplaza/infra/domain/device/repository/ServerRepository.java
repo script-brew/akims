@@ -5,13 +5,8 @@ import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.repository.query.Param;
 
 import com.akplaza.infra.domain.device.entity.Server;
-import com.akplaza.infra.domain.hardware.entity.Hardware;
 
 public interface ServerRepository extends JpaRepository<Server, Long>, JpaSpecificationExecutor<Server> {
     // 향후 호스트명 중복 검사 등의 메서드를 여기에 추가할 수 있습니다.

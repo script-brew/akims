@@ -13,6 +13,7 @@ public class RackResponse {
     private String name;
     private Integer size;
     private int hardwareCount; // 🌟 추가: 실장된 하드웨어 수
+    private String rackType;
 
     public RackResponse(Rack rack, int hardwareCount) {
         this.id = rack.getId();
@@ -24,6 +25,9 @@ public class RackResponse {
             this.locationName = rack.getLocation().getName();
         }
         this.hardwareCount = hardwareCount; // 🌟 추가
+        if (rack.getRackType() != null) {
+            this.rackType = rack.getRackType().name();
+        }
 
     }
 }

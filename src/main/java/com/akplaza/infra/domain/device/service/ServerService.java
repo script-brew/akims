@@ -25,7 +25,6 @@ import com.akplaza.infra.domain.device.entity.ServerSpec;
 import com.akplaza.infra.domain.device.entity.ServerType;
 import com.akplaza.infra.domain.device.repository.ServerRepository;
 import com.akplaza.infra.domain.device.repository.DiskRepository;
-import com.akplaza.infra.domain.hardware.dto.HardwareResponse;
 import com.akplaza.infra.domain.hardware.entity.Hardware;
 import com.akplaza.infra.domain.hardware.repository.HardwareRepository;
 import com.akplaza.infra.domain.network.dto.IpAssignRequest;

@@ -8,6 +8,7 @@ import java.util.Map;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.akplaza.infra.domain.device.dto.DiskRequest;
@@ -282,9 +283,17 @@ public class ServerService {
     // ==========================================
     // 5. 엑셀 다운로드
     // ==========================================
-    public void downloadExcel(Map<String, String> searchParams, HttpServletResponse response) throws Exception {
+    public void downloadExcel(Map<String, String> searchParams, @RequestParam(defaultValue = "id,desc") String sort,
+            HttpServletResponse response) throws Exception {
         log.info("서버 장비 엑셀 다운로드 시작");
-        PageRequest maxPageRequest = PageRequest.of(0, 10000, Sort.by("id").descending());
+
+        searchParams.remove("sort"); // 검색 필터에서 제거
+        String[] sortArr = sort.split(",");
+        Sort.Direction direction = sortArr.length > 1 && sortArr[1].equalsIgnoreCase("asc") ? Sort.Direction.ASC
+                : Sort.Direction.DESC;
+
+        // 정렬 조건 반영하여 최대 10,000건 조회
+        PageRequest maxPageRequest = PageRequest.of(0, 10000, Sort.by(direction, sortArr[0]));
         Page<ServerResponse> serverPage = this.searchServers(searchParams, maxPageRequest);
 
         List<String> headers = Arrays.asList(
@@ -297,7 +306,7 @@ public class ServerService {
                     ? srv.getIps().stream().map(IpAssignRequest::getIpAddress).collect(Collectors.joining("\n"))
                     : "";
             String diskStr = srv.getDisks() != null ? srv.getDisks().stream()
-                    .map(d -> d.getDiskType() + "(" + d.getSize() + "GB, " + d.getMountPoint() + ")")
+                    .map(d -> d.getDiskType() + "(" + d.getSize() + "GB, " + d.getDiskName() + ")")
                     .collect(Collectors.joining("\n")) : "";
             String swStr = srv.getSoftwares() != null ? srv.getSoftwares().stream()
                     .map(s -> s.getName() + " " + (s.getVersion() != null ? s.getVersion() : ""))
@@ -331,35 +340,33 @@ public class ServerService {
                 continue;
 
             try {
-                String hostName = row.get(4).trim();
+                String hostName = row.get(5).trim();
                 ServerCategory category = ServerCategory.valueOf(row.get(1).toUpperCase());
-                Environment env = Environment.valueOf(row.get(3).toUpperCase());
+                Environment env = Environment.valueOf(row.get(4).toUpperCase());
                 String serialNo = row.get(2).trim();
                 Long hardwareId = null;
-                ServerType serverType = ServerType.VIRTUAL;
+                ServerType serverType = ServerType.valueOf(row.get(3).toUpperCase());
 
                 if (!serialNo.equals("-") && !serialNo.isEmpty()) {
                     Hardware hw = allHardware.stream().filter(h -> h.getSerialNo().equals(serialNo)).findFirst()
                             .orElse(null);
                     if (hw != null) {
                         hardwareId = hw.getId();
-                        serverType = ServerType.PHYSICAL;
                     }
                 }
 
-                String os = row.get(6).trim();
-                String desc = row.get(5).trim();
-                double cpu = row.get(8).isEmpty() ? 1.0 : Double.parseDouble(row.get(8));
-                double mem = row.get(9).isEmpty() ? 1.0 : Double.parseDouble(row.get(9));
-                boolean isHa = row.get(13).equalsIgnoreCase("O");
-                ServerBackup backupStr = ServerBackup.valueOf(row.get(12).isEmpty() ? "NO_BACKUP" : row.get(12));
+                String os = row.get(7).trim();
+                String desc = row.get(6).trim();
+                double cpu = row.get(9).isEmpty() ? 1.0 : Double.parseDouble(row.get(9));
+                double mem = row.get(10).isEmpty() ? 1.0 : Double.parseDouble(row.get(10));
+                boolean isHa = row.get(14).equalsIgnoreCase("O");
+                ServerBackup backupStr = ServerBackup.valueOf(row.get(13).isEmpty() ? "NO_BACKUP" : row.get(13));
                 ServerMonitoring monStr = ServerMonitoring
-                        .valueOf(row.get(12).isEmpty() ? "NO_MONITORING" : row.get(12));
-
+                        .valueOf(row.get(15).isEmpty() ? "NO_MONITORING" : row.get(15));
                 // IP 파싱
                 List<IpAssignRequest> ipReqs = new ArrayList<>();
-                if (!row.get(7).isEmpty()) {
-                    for (String ip : row.get(7).split("\n")) {
+                if (!row.get(8).isEmpty()) {
+                    for (String ip : row.get(8).split("\n")) {
                         ip = ip.trim();
                         if (ip.isEmpty() || ip.equals("-"))
                             continue;
@@ -371,8 +378,8 @@ public class ServerService {
 
                 // Disk 파싱
                 List<DiskRequest> diskReqs = new ArrayList<>();
-                if (!row.get(10).isEmpty()) {
-                    for (String d : row.get(10).split("\n")) {
+                if (!row.get(11).isEmpty()) {
+                    for (String d : row.get(11).split("\n")) {
                         d = d.trim();
                         if (d.isEmpty() || d.equals("-"))
                             continue;
@@ -380,15 +387,17 @@ public class ServerService {
                         String inner = d.substring(d.indexOf("(") + 1, d.indexOf(")"));
                         String[] parts = inner.split(",");
                         int size = Integer.parseInt(parts[0].replace("GB", "").trim());
-                        String mount = parts.length > 1 ? parts[1].trim() : "/";
-                        diskReqs.add(new DiskRequest(type, size, mount));
+
+                        // 🌟 변경: 마운트 대신 용도/이름 파싱 (없으면 빈 문자열)
+                        String diskName = parts.length > 1 ? parts[1].trim() : "";
+                        diskReqs.add(new DiskRequest(type, size, diskName));
                     }
                 }
 
                 // Software 파싱
                 List<SoftwareRequest> swReqs = new ArrayList<>();
-                if (!row.get(11).isEmpty()) {
-                    for (String s : row.get(11).split("\n")) {
+                if (!row.get(12).isEmpty()) {
+                    for (String s : row.get(12).split("\n")) {
                         s = s.trim();
                         if (s.isEmpty() || s.equals("-"))
                             continue;
@@ -420,7 +429,7 @@ public class ServerService {
                 this.createServer(request); // 트랜잭션 내 자체 호출
                 successCount++;
             } catch (Exception e) {
-                log.error("엑셀 {}번째 행({}) 파싱 실패: {}", i + 1, row.get(4), e.getMessage());
+                log.error("엑셀 {}번째 행({}) 파싱 실패: {}", i + 1, row.get(5), e.getMessage());
             }
         }
         return successCount;

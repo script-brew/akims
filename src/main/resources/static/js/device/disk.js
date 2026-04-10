@@ -10,7 +10,7 @@ const inputId = document.getElementById("disk-id");
 const selServer = document.getElementById("disk-server-id");
 const selType = document.getElementById("disk-type");
 const inputCapacity = document.getElementById("disk-capacity");
-const inputMount = document.getElementById("disk-mount");
+const inputName = document.getElementById("disk-name");
 const serverSelectGroup = document.getElementById("server-select-group");
 
 const btnOpenModal = document.getElementById("btn-open-modal");
@@ -127,7 +127,7 @@ function openCreateModal() {
   selServer.value = "";
   selType.value = "SSD";
   inputCapacity.value = 100;
-  inputMount.value = "";
+  inputName.value = "";
 
   serverSelectGroup.style.display = "block"; // 신규 등록시는 서버 선택 가능
   ui.openModal("disk-modal", "modal-title", "새 디스크 등록");
@@ -147,7 +147,7 @@ function handleEditAction() {
   selServer.value = target.serverId;
   selType.value = target.diskType;
   inputCapacity.value = target.size;
-  inputMount.value = target.mountPoint;
+  inputName.value = target.mountPoint;
 
   serverSelectGroup.style.display = "none"; // 수정시는 서버 변경 불가 (정합성 유지)
   ui.openModal("disk-modal", "modal-title", "디스크 정보 수정");
@@ -159,7 +159,7 @@ async function saveDisk() {
     alert("대상 서버를 선택해주세요.");
     return;
   }
-  if (!inputMount.value.trim()) {
+  if (!inputName.value.trim()) {
     alert("마운트 경로를 입력해주세요.");
     return;
   }
@@ -168,7 +168,7 @@ async function saveDisk() {
     serverId: parseInt(selServer.value),
     diskType: selType.value,
     size: parseInt(inputCapacity.value),
-    mountPoint: inputMount.value.trim(),
+    diskName: inputName.value.trim(),
   };
 
   try {

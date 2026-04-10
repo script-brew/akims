@@ -1,7 +1,6 @@
 // 1-1. NetworkDeviceCreateRequest.java (등록 요청 DTO)
 package com.akplaza.infra.domain.device.dto;
 
-import java.util.ArrayList;
 import java.util.List;
 
 import com.akplaza.infra.domain.device.entity.NetworkDeviceCategory;

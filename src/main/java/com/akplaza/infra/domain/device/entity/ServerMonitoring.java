@@ -4,5 +4,6 @@ public enum ServerMonitoring {
     NO_MONITORING,
     PROMETHEUS,
     MAXIGENT,
-    ZABBIX
+    ZABBIX,
+    CLOUDWATCH
 }

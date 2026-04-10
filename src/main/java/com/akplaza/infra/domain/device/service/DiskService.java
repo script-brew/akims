@@ -10,8 +10,6 @@ import com.akplaza.infra.domain.device.entity.Disk;
 import com.akplaza.infra.domain.device.entity.Server;
 import com.akplaza.infra.domain.device.repository.DiskRepository;
 import com.akplaza.infra.domain.device.repository.ServerRepository;
-import com.akplaza.infra.domain.hardware.dto.HardwareResponse;
-import com.akplaza.infra.domain.hardware.entity.Hardware;
 import com.akplaza.infra.global.error.exception.ResourceNotFoundException;
 import com.akplaza.infra.global.common.repository.DynamicSearchSpec;
 
@@ -54,7 +52,7 @@ public class DiskService {
                     .server(server)
                     .diskType(req.getDiskType())
                     .size(req.getSize())
-                    .mountPoint(req.getMountPoint())
+                    .diskName(req.getDiskName())
                     .build();
             diskRepository.save(disk);
         }
@@ -74,7 +72,7 @@ public class DiskService {
                 .server(server)
                 .diskType(dto.getDiskType())
                 .size(dto.getSize())
-                .mountPoint(dto.getMountPoint())
+                .diskName(dto.getDiskName())
                 .build();
         return diskRepository.save(disk).getId();
     }

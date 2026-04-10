@@ -22,7 +22,6 @@ import com.akplaza.infra.domain.device.dto.DiskCreateRequest;
 import com.akplaza.infra.domain.device.dto.DiskResponse;
 import com.akplaza.infra.domain.device.dto.DiskUpdateRequest;
 import com.akplaza.infra.domain.device.service.DiskService;
-import com.akplaza.infra.domain.hardware.dto.HardwareResponse;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;

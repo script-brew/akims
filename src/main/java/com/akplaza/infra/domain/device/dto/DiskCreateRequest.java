@@ -23,6 +23,5 @@ public class DiskCreateRequest {
     @Min(value = 1, message = "디스크 용량은 1GB 이상이어야 합니다.")
     private Integer size;
 
-    @NotBlank(message = "마운트 포인트(예: /, C:\\)는 필수 입력값입니다.")
-    private String mountPoint;
+    private String diskName;
 }

@@ -1,6 +1,5 @@
 package com.akplaza.infra.domain.device.controller;
 
-import java.util.List;
 import java.util.Map;
 
 import org.springframework.http.HttpStatus;
@@ -22,7 +21,6 @@ import org.springframework.data.domain.Sort;
 import com.akplaza.infra.domain.device.dto.NetworkDeviceCreateRequest;
 import com.akplaza.infra.domain.device.dto.NetworkDeviceResponse;
 import com.akplaza.infra.domain.device.dto.NetworkDeviceUpdateRequest;
-import com.akplaza.infra.domain.device.dto.ServerResponse;
 import com.akplaza.infra.domain.device.service.NetworkDeviceService;
 
 import io.swagger.v3.oas.annotations.Operation;

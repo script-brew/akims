@@ -1,6 +1,5 @@
 package com.akplaza.infra.domain.device.controller;
 
-import java.util.List;
 import java.util.Map;
 
 import org.springframework.data.domain.PageRequest;
@@ -25,11 +24,6 @@ import com.akplaza.infra.domain.device.dto.ServerResponse;
 import com.akplaza.infra.domain.device.dto.ServerUpdateRequest;
 
 import com.akplaza.infra.domain.device.service.ServerService;
-
-import com.akplaza.infra.domain.hardware.repository.HardwareRepository;
-
-import com.akplaza.infra.domain.network.entity.IpCidr;
-import com.akplaza.infra.domain.network.repository.IpCidrRepository;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -67,10 +61,20 @@ public class ServerController {
     public ResponseEntity<Page<ServerResponse>> getServers(
             @RequestParam Map<String, String> searchParams,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(defaultValue = "id,desc") String sort) {
 
-        PageRequest pageRequest = PageRequest.of(page, size, Sort.by("id").descending());
-        return ResponseEntity.ok(serverService.searchServers(searchParams, pageRequest));
+        searchParams.remove("page");
+        searchParams.remove("size");
+        searchParams.remove("sort");
+        String[] sortArr = sort.split(",");
+        Sort.Direction direction = sortArr.length > 1 && sortArr[1].equalsIgnoreCase("asc") ? Sort.Direction.ASC
+                : Sort.Direction.DESC;
+        PageRequest pageRequest = PageRequest.of(page, size, Sort.by(direction, sortArr[0]));
+
+        // PageRequest를 Service로 전달 (Service 메서드 파라미터가 맞는지 확인 필요)
+        Page<ServerResponse> result = serverService.searchServers(searchParams, pageRequest);
+        return ResponseEntity.ok(result);
     }
 
     // @Operation(summary = "서버 전체 조회", description = "시스템에 등록된 전체 서버 목록을 조회합니다.")
@@ -101,62 +105,11 @@ public class ServerController {
 
     @Operation(summary = "서버 목록 엑셀 다운로드", description = "검색 조건에 맞는 서버 목록을 엑셀 파일로 다운로드합니다.")
     @GetMapping("/excel/download")
-    public void downloadExcel(@RequestParam Map<String, String> searchParams, HttpServletResponse response)
+    public void downloadExcel(@RequestParam Map<String, String> searchParams,
+            @RequestParam(defaultValue = "id,desc") String sort, HttpServletResponse response)
             throws Exception {
-
-        // 1. 현재 검색 조건에 맞는 데이터를 모두 가져옵니다
-        // PageRequest maxPageRequest = PageRequest.of(0, 10000,
-        // Sort.by("id").descending());
-        // Page<ServerResponse> serverPage = serverService.searchServers(searchParams,
-        // maxPageRequest);
-
-        // // 2. 🌟 요청하신 실무형 커스텀 엑셀 헤더 적용
-        // List<String> headers = Arrays.asList(
-        // "위치", "분류", "H/W", "용도", "서버명", "설명", "운영체제(Version)",
-        // "IP", "CPU", "Memory", "Disk", "Softwares", "백업", "HA", "모니터링");
-
-        // // 3. 데이터를 2차원 리스트로 변환
-        // List<List<Object>> dataList = new ArrayList<>();
-        // for (ServerResponse srv : serverPage.getContent()) {
-
-        // // 🌟 핵심 방어 로직: 1:N List 객체들을 엑셀 한 칸에 들어갈 수 있도록 예쁜 문자열로 변환 (예: "10.0.0.1,
-        // // 10.0.0.2")
-        // String ipStr = srv.getIps() != null
-        // ?
-        // srv.getIps().stream().map(IpAssignRequest::getIpAddress).collect(Collectors.joining("\n"))
-        // : "";
-
-        // String diskStr = srv.getDisks() != null ? srv.getDisks().stream()
-        // .map(d -> d.getDiskType() + "(" + d.getSize() + "GB, " + d.getMountPoint() +
-        // ")")
-        // .collect(Collectors.joining("\n")) : "";
-
-        // String swStr = srv.getSoftwares() != null ? srv.getSoftwares().stream()
-        // .map(s -> s.getName() + " " + (s.getVersion() != null ? s.getVersion() : ""))
-        // .collect(Collectors.joining("\n")) : "";
-
-        // dataList.add(Arrays.asList(
-        // srv.getLocationName() != null ? srv.getLocationName() : "-",
-        // srv.getServerCategory(),
-        // srv.getSerialNo() != null ? srv.getSerialNo() : "-",
-        // srv.getEnvironment(),
-        // srv.getHostName(),
-        // srv.getDescription() != null ? srv.getDescription() : "",
-        // srv.getOs(),
-        // ipStr, // 파싱된 IP 문자열
-        // srv.getCpuCore(),
-        // srv.getMemoryGb(),
-        // diskStr, // 파싱된 Disk 문자열
-        // swStr, // 파싱된 S/W 문자열
-        // srv.getBackupInfo(),
-        // srv.isHa() ? "O" : "X", // 롬복의 boolean getter는 기본적으로 isHa()로 생성됩니다.
-        // srv.getMonitoringInfo()));
-        // }
-
-        // // 4. 유틸리티를 통한 즉시 다운로드 (파일명도 직관적으로 변경)
-        // ExcelUtil.download(response, "AKIMS_서버대장_추출", headers, dataList);
         log.info("Server API: 엑셀 다운로드 요청");
-        serverService.downloadExcel(searchParams, response);
+        serverService.downloadExcel(searchParams, sort, response);
 
     }
 

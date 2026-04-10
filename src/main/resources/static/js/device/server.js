@@ -52,6 +52,9 @@ const btnDownloadExcel = document.getElementById("btn-download-excel");
 const btnUploadExcel = document.getElementById("btn-upload-excel");
 const excelFileInput = document.getElementById("excel-file-input");
 
+// Sort
+const btnSort = document.querySelectorAll("th.sortable");
+
 // --- State ---
 let serverList = [];
 let hardwareList = [];
@@ -62,6 +65,10 @@ let currentPage = 0;
 let activeFilters = [];
 let searchFilter; // 🌟 필터 인스턴스 변수
 let pagination; // 🌟 페이징 인스턴스 변수
+
+// 🌟 정렬 상태를 관리할 변수 추가 (기본값: id 최신순)
+let currentSortColumn = "id";
+let currentSortDirection = "desc";
 
 // --- Init ---
 document.addEventListener("DOMContentLoaded", async () => {
@@ -92,6 +99,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   );
 
+  updateSortIcons();
   await loadHardwares(); // 하드웨어 매핑용
   await loadCidrs(); // 🌟 IP 대역 로드
   await loadServers();
@@ -144,7 +152,8 @@ async function loadServers() {
   try {
     // 🌟 searchFilter 인스턴스에게 현재 쌓인 파라미터 문자열을 달라고 요청!
     const filterParams = searchFilter.getQueryParams();
-    const url = `/api/v1/servers?page=${currentPage}&size=20${filterParams}`;
+    const sortParam = `&sort=${currentSortColumn},${currentSortDirection}`;
+    const url = `/api/v1/servers?page=${currentPage}&size=20${sortParam}${filterParams}`;
 
     const responseData = await api.get(url);
     serverList = responseData.content || [];
@@ -201,7 +210,8 @@ function getOsClass(osName) {
 function getTypeBadge(type) {
   if (type === "PHYSICAL") return "badge-physical";
   if (type === "VIRTUAL") return "badge-vm";
-  if (type === "CLOUD") return "badge-cloud";
+  if (type === "AWS_CLOUD") return "badge-aws-cloud";
+  if (type === "SCP_CLOUD") return "badge-scp-cloud";
   return "";
 }
 
@@ -235,7 +245,7 @@ function createIpRow(cidrId = "", ip = "") {
   ipListContainer.appendChild(row);
 }
 
-function createDiskRow(type = "SSD", capacity = 100, mount = "/") {
+function createDiskRow(type = "SSD", capacity = 100, diskName = "") {
   const row = document.createElement("div");
   row.className = "disk-row form-row";
   row.style.marginBottom = "0";
@@ -255,7 +265,9 @@ function createDiskRow(type = "SSD", capacity = 100, mount = "/") {
             }>NAS 마운트</option>
         </select>
         <input type="number" class="disk-cap-input" placeholder="용량(GB)" value="${capacity}" min="1" style="flex:1;">
-        <input type="text" class="disk-mount-input" placeholder="마운트 (예: /data, C:)" value="${mount}" style="flex:1;">
+        
+        <input type="text" class="disk-name-input" placeholder="용도/이름 (예: OS, Data, rootvg)" value="${diskName}" style="flex:1.5;">
+        
         <button type="button" class="btn small danger btn-remove-disk">X</button>
     `;
 
@@ -293,7 +305,7 @@ function renderTable() {
         ? (() => {
             const hw = hardwareList.find((h) => h.id === srv.hardwareId);
             return hw
-              ? `<strong>${hw.model}</strong><br><small style="color:#777;">(${hw.serialNo})</small>`
+              ? `<strong>${hw.description}</strong><br><small style="color:#777;">(${hw.serialNo})</small>`
               : "알 수 없음";
           })()
         : '<span style="color:#999;">- (클라우드/미할당) -</span>';
@@ -358,15 +370,34 @@ function setupEventListeners() {
   btnCloseDetail.addEventListener("click", () => {
     detailContainer.style.display = "none";
   });
+  btnSort.forEach((th) => {
+    th.addEventListener("click", () => {
+      const clickedColumn = th.getAttribute("data-sort");
+
+      if (currentSortColumn === clickedColumn) {
+        // 이미 선택된 컬럼이면 오름차순/내림차순 토글
+        currentSortDirection = currentSortDirection === "asc" ? "desc" : "asc";
+      } else {
+        // 새로운 컬럼을 클릭하면 오름차순(asc)으로 초기화
+        currentSortColumn = clickedColumn;
+        currentSortDirection = "asc";
+      }
+
+      updateSortIcons(); // 화살표 UI 갱신
+
+      // 정렬이 바뀌면 1페이지로 돌아가서 데이터 다시 불러오기
+      currentPage = 0;
+      loadServers();
+    });
+  });
 
   btnDownloadExcel.addEventListener("click", () => {
     // 현재 검색된 필터 조건을 그대로 URL 파라미터로 가져옴
     const filterParams = searchFilter.getQueryParams();
+    const sortParam = `sort=${currentSortColumn},${currentSortDirection}`; // & 없이 시작
     // 브라우저의 기본 다운로드 동작을 유도하기 위해 window.location.href 사용
-    window.location.href = `/api/v1/servers/excel/download?${filterParams.replace(
-      /^&/,
-      ""
-    )}`;
+    const exportUrl = `/api/v1/servers/excel/download?${sortParam}${filterParams}`;
+    window.location.href = exportUrl;
   });
 
   // 엑셀 업로드 버튼 클릭 시 숨겨진 file input 클릭
@@ -471,9 +502,7 @@ function openEditModal(id) {
 
   diskListContainer.innerHTML = "";
   if (target.disks && target.disks.length > 0) {
-    target.disks.forEach((d) =>
-      createDiskRow(d.diskType, d.size, d.mountPoint)
-    );
+    target.disks.forEach((d) => createDiskRow(d.diskType, d.size, d.diskName));
   } else {
     createDiskRow();
   }
@@ -544,12 +573,12 @@ async function saveServer() {
   document.querySelectorAll(".disk-row").forEach((row) => {
     const dType = row.querySelector(".disk-type-sel").value;
     const dCap = row.querySelector(".disk-cap-input").value;
-    const dMount = row.querySelector(".disk-mount-input").value.trim();
+    const dName = row.querySelector(".disk-name-input").value.trim();
     if (dType && dCap) {
       disks.push({
         diskType: dType,
         size: parseInt(dCap),
-        mountPoint: dMount,
+        diskName: dName,
       });
     }
   });
@@ -663,7 +692,7 @@ window.viewServerDetail = (id) => {
       ? srv.disks
           .map(
             (d) =>
-              `<div style="margin-bottom:4px;">[${d.diskType}] <strong>${d.size}GB</strong> <code style="font-size:0.8rem;">${d.mountPoint}</code></div>`
+              `<div style="margin-bottom:4px;">[${d.diskType}] <strong>${d.size}GB</strong> <code style="font-size:0.8rem;">${d.diskName}</code></div>`
           )
           .join("")
       : '<span style="color:#999;">등록된 디스크 없음</span>';
@@ -765,3 +794,21 @@ window.viewServerDetail = (id) => {
   detailContainer.style.display = "block";
   detailContainer.scrollIntoView({ behavior: "smooth", block: "start" });
 };
+
+// 🌟 현재 정렬 상태에 따라 테이블 헤더의 화살표(▲/▼) 아이콘을 업데이트하는 함수
+function updateSortIcons() {
+  document.querySelectorAll("th.sortable").forEach((th) => {
+    const icon = th.querySelector(".sort-icon");
+    if (!icon) return;
+
+    if (th.getAttribute("data-sort") === currentSortColumn) {
+      // 현재 정렬 중인 컬럼
+      icon.innerHTML = currentSortDirection === "asc" ? "▲" : "▼";
+      icon.style.color = "var(--primary-color)"; // 활성화된 색상 (파란색 등)
+    } else {
+      // 정렬되지 않은 컬럼
+      icon.innerHTML = "↕";
+      icon.style.color = "#bdc3c7"; // 비활성화 색상 (회색)
+    }
+  });
+}

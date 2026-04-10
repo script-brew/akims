@@ -11,5 +11,5 @@ import lombok.NoArgsConstructor;
 public class DiskRequest {
     private DiskType diskType; // SSD, HDD, NVME, SAN 등
     private int size; // 용량 (GB)
-    private String mountPoint; // 마운트 경로 (예: "/", "/data", "C:\")
+    private String diskName; // 용도/이름 (예: "/", "/data", "C:\")
 }

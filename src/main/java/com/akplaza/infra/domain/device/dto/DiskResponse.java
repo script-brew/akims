@@ -10,7 +10,7 @@ public class DiskResponse {
     private Long id;
     private String diskType;
     private Integer size;
-    private String mountPoint;
+    private String diskName;
 
     // 조인된 서버 정보
     private Long serverId;
@@ -20,7 +20,7 @@ public class DiskResponse {
         this.id = disk.getId();
         this.diskType = disk.getDiskType().name();
         this.size = disk.getSize();
-        this.mountPoint = disk.getMountPoint();
+        this.diskName = disk.getDiskName();
 
         if (disk.getServer() != null) {
             this.serverId = disk.getServer().getId();

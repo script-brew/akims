@@ -276,8 +276,6 @@ public class NetworkDeviceService {
             if (row.size() < 5 || row.get(3).trim().isEmpty())
                 continue;
 
-            log.debug("데이터 확인: {} {} {} {} {} {}", row.get(0), row.get(1), row.get(2), row.get(3), row.get(4),
-                    row.get(5), row.get(6), row.get(7));
             try {
                 String name = row.get(3).trim();
                 NetworkDeviceCategory category = NetworkDeviceCategory.valueOf(row.get(1).trim());

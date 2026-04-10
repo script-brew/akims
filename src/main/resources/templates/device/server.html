@@ -58,11 +58,21 @@
               <th width="4%">
                 <input type="checkbox" id="check-all" class="data-checkbox" />
               </th>
-              <th width="5%">환경</th>
-              <th width="5%">서버 타입</th>
-              <th width="5%">카테고리</th>
-              <th width="15%">호스트명(HostName)</th>
-              <th width="12%">운영체제(OS)</th>
+              <th width="8%" class="sortable" data-sort="environment">
+                환경<span class="sort-icon">↕</span>
+              </th>
+              <th width="8%" class="sortable" data-sort="serverType">
+                서버 타입<span class="sort-icon">↕</span>
+              </th>
+              <th width="10%" class="sortable" data-sort="serverCategory">
+                카테고리<span class="sort-icon">↕</span>
+              </th>
+              <th width="15%" class="sortable" data-sort="hostName">
+                호스트명(HostName)<span class="sort-icon">↕</span>
+              </th>
+              <th width="15%" class="sortable" data-sort="os">
+                운영체제(OS)<span class="sort-icon">↕</span>
+              </th>
               <th width="10%">스펙</th>
               <th width="10%">IP 주소</th>
               <th width="15%">물리 호스트 (Hardware)</th>
@@ -154,8 +164,8 @@
             <select id="srv-type">
               <option value="VIRTUAL">가상 머신 (VM)</option>
               <option value="PHYSICAL">물리 서버 (Baremetal)</option>
-              <option value="AWS">AWS 클라우드</option>
-              <option value="SCP">SCP 클라우드</option>
+              <option value="AWS_CLOUD">AWS 클라우드</option>
+              <option value="SCP_CLOUD">SCP 클라우드</option>
             </select>
           </div>
           <div class="form-group">
@@ -240,6 +250,7 @@
               <option value="PROMETHEUS">프로메테우스</option>
               <option value="MAXIGENT">맥시전트</option>
               <option value="ZABBIX">자빅스</option>
+              <option value="CLOUDWATCH">클라우드와치</option>
             </select>
           </div>
           <div class="form-group">

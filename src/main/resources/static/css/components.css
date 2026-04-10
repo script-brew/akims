@@ -230,3 +230,22 @@
   cursor: not-allowed;
   border-color: #ecf0f1;
 }
+
+/* 🌟 정렬 가능한 테이블 헤더 스타일 */
+th.sortable {
+  cursor: pointer;
+  user-select: none; /* 클릭 시 텍스트 드래그 방지 */
+  transition: background-color 0.2s;
+}
+
+th.sortable:hover {
+  background-color: #eaf2f8; /* 마우스 오버 시 연한 파란색 배경 */
+}
+
+.sort-icon {
+  font-size: 0.8rem;
+  color: #bdc3c7;
+  margin-left: 5px;
+  display: inline-block;
+  vertical-align: middle;
+}

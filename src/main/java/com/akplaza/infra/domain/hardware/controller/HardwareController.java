@@ -1,8 +1,5 @@
 package com.akplaza.infra.domain.hardware.controller;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
 import java.util.Map;
 
 import org.springframework.data.domain.PageRequest;
@@ -22,12 +19,8 @@ import org.springframework.web.multipart.MultipartFile;
 import com.akplaza.infra.domain.hardware.dto.HardwareCreateRequest;
 import com.akplaza.infra.domain.hardware.dto.HardwareResponse;
 import com.akplaza.infra.domain.hardware.dto.HardwareUpdateRequest;
-import com.akplaza.infra.domain.hardware.entity.EquipmentType;
 import com.akplaza.infra.domain.hardware.service.HardwareService;
-import com.akplaza.infra.domain.hardware.repository.HardwareRepository;
-import com.akplaza.infra.domain.space.entity.Rack;
 import com.akplaza.infra.domain.space.repository.RackRepository;
-import com.akplaza.infra.global.common.util.ExcelUtil;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;

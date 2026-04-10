@@ -11,11 +11,7 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.akplaza.infra.domain.device.dto.ServerResponse;
-import com.akplaza.infra.domain.device.entity.Server;
 import com.akplaza.infra.domain.hardware.repository.HardwareRepository;
-import com.akplaza.infra.domain.network.entity.AssignedType;
-import com.akplaza.infra.domain.network.entity.Ip;
 import com.akplaza.infra.domain.space.dto.RackRequest;
 import com.akplaza.infra.domain.space.dto.RackResponse;
 import com.akplaza.infra.domain.space.entity.Location;

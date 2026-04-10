@@ -237,7 +237,7 @@ function renderTable() {
         ? (() => {
             const hw = hardwareList.find((h) => h.id === dev.hardwareId);
             return hw
-              ? `<strong>${hw.model}</strong> <small>(${hw.serialNo})</small>`
+              ? `<strong>${hw.description}</strong><br><small>(${hw.serialNo})</small>`
               : "알 수 없음";
           })()
         : '<span style="color:#999;">미할당</span>';

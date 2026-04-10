@@ -15,8 +15,12 @@
 .badge-vm {
   background-color: #8e44ad;
 } /* 가상: 보라색 */
-.badge-cloud {
-  background-color: #2980b9;
+.badge-aws-cloud {
+  background-color: #f3bb04;
+} /* 클라우드: 파란색 */
+
+.badge-scp-cloud {
+  background-color: #293fb9;
 } /* 클라우드: 파란색 */
 
 /* OS 아이콘/텍스트 (간단한 스타일) */

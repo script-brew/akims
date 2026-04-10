@@ -43,20 +43,20 @@ public class Disk extends BaseTimeEntity {
     @Column(nullable = false)
     private Integer size; // 단위: GB
 
-    @Column(nullable = false, length = 50)
-    private String mountPoint; // 예: "C:\", "/", "/data"
+    @Column(nullable = false, length = 500)
+    private String diskName; // 예: "C:\", "/", "/data"
 
     @Builder
-    public Disk(Server server, DiskType diskType, Integer size, String mountPoint) {
+    public Disk(Server server, DiskType diskType, Integer size, String diskName) {
         this.server = server;
         this.diskType = diskType;
         this.size = size;
-        this.mountPoint = mountPoint;
+        this.diskName = diskName;
     }
 
-    public void updateDiskInfo(DiskType diskType, Integer size, String mountPoint) {
+    public void updateDiskInfo(DiskType diskType, Integer size, String diskName) {
         this.diskType = diskType;
         this.size = size;
-        this.mountPoint = mountPoint;
+        this.diskName = diskName;
     }
 }

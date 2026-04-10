@@ -1,76 +1,66 @@
 import { api } from "../common/api.js";
 import { ui } from "../common/ui.js";
 import { SearchFilter } from "../common/search-filter.js";
-import { Pagination } from "../common/pagination.js";
 
-// --- DOM Elements ---
-const tableBody = document.getElementById("server-table-body");
-const modalTitle = document.getElementById("modal-title");
+// --- 1. DOM Elements Mapping ---
+const serverGridContainer = document.getElementById("server-grid-container");
 
-// Form Inputs
-const inputId = document.getElementById("srv-id");
-const inputHostName = document.getElementById("srv-hostname");
-const selEnvironment = document.getElementById("srv-environment");
-const selCategory = document.getElementById("srv-category");
-const selType = document.getElementById("srv-type");
-const inputOs = document.getElementById("srv-os");
-const inputCpu = document.getElementById("srv-cpu");
-const inputRam = document.getElementById("srv-ram");
-const selIpCidr = document.getElementById("srv-ip-cidr");
-const inputIpAddress = document.getElementById("srv-ip-address");
-const selHardware = document.getElementById("srv-hardware");
-const inputDesc = document.getElementById("srv-desc");
-
-const chkHa = document.getElementById("srv-ha");
-const selBackup = document.getElementById("srv-backup");
-const selMonitoring = document.getElementById("srv-monitoring");
-
-const hardwareMappingArea = document.getElementById("hardware-mapping-area");
-const ipListContainer = document.getElementById("ip-list-container");
-const diskListContainer = document.getElementById("disk-list-container");
-const swContainer = document.getElementById("sw-list-container");
-const dbmsContainer = document.getElementById("dbms-list-container");
-
-const detailContainer = document.getElementById("server-detail-container");
-const detailTitle = document.getElementById("detail-title");
-const detailContent = document.getElementById("server-detail-content");
-
-// Buttons
+// Header Actions
+const btnUploadExcel = document.getElementById("btn-upload-excel");
+const excelFileInput = document.getElementById("excel-file-input");
+const btnDownloadExcel = document.getElementById("btn-download-excel");
 const btnOpenModal = document.getElementById("btn-open-modal");
 const btnEdit = document.getElementById("btn-edit");
 const btnDelete = document.getElementById("btn-delete");
-const btnCancel = document.getElementById("btn-cancel");
-const btnSave = document.getElementById("btn-save");
-const btnAddIp = document.getElementById("btn-add-ip");
-const btnAddDisk = document.getElementById("btn-add-disk");
-const btnAddSw = document.getElementById("btn-add-sw");
+
+// Detail View (Inline)
+const serverDetailContainer = document.getElementById(
+  "server-detail-container"
+);
+const detailContent = document.getElementById("server-detail-content");
+const detailTitle = document.getElementById("detail-title");
 const btnCloseDetail = document.getElementById("btn-close-detail");
 
-const paginationArea = document.getElementById("pagination-area");
+// Edit Modal
+const modalEdit = document.getElementById("srv-modal");
+const btnCancel = document.getElementById("btn-cancel");
+const btnSave = document.getElementById("btn-save");
 
-const btnDownloadExcel = document.getElementById("btn-download-excel");
-const btnUploadExcel = document.getElementById("btn-upload-excel");
-const excelFileInput = document.getElementById("excel-file-input");
+// Modal Form Inputs
+const inputId = document.getElementById("srv-id");
+const selCategory = document.getElementById("srv-category");
+const selEnvironment = document.getElementById("srv-environment");
+const selType = document.getElementById("srv-type");
+const inputHostName = document.getElementById("srv-hostname");
+const inputOs = document.getElementById("srv-os");
+const inputCpu = document.getElementById("srv-cpu");
+const inputRam = document.getElementById("srv-ram");
+const chkHa = document.getElementById("srv-ha");
+const selMonitoring = document.getElementById("srv-monitoring");
+const selBackup = document.getElementById("srv-backup");
+const selHardware = document.getElementById("srv-hardware");
+const inputDesc = document.getElementById("srv-desc");
 
-// Sort
-const btnSort = document.querySelectorAll("th.sortable");
+// Dynamic Lists Containers & Buttons
+const ipListContainer = document.getElementById("ip-list-container");
+const btnAddIp = document.getElementById("btn-add-ip");
+const diskListContainer = document.getElementById("disk-list-container");
+const btnAddDisk = document.getElementById("btn-add-disk");
+const swListContainer = document.getElementById("sw-list-container");
+const btnAddSw = document.getElementById("btn-add-sw");
 
-// --- State ---
-let serverList = [];
+// --- 2. State ---
 let hardwareList = [];
 let cidrList = [];
-
-// 페이징 상태 관리
-let currentPage = 0;
+let serverGrid;
+let currentSortParam = "id,desc";
+let currentKeyword = "";
 let activeFilters = [];
 let searchFilter; // 🌟 필터 인스턴스 변수
-let pagination; // 🌟 페이징 인스턴스 변수
 
-// 🌟 정렬 상태를 관리할 변수 추가 (기본값: id 최신순)
-let currentSortColumn = "id";
-let currentSortDirection = "desc";
-
-// --- Init ---
+// ==========================================
+// 🚀 초기화
+// ==========================================
 document.addEventListener("DOMContentLoaded", async () => {
   // 🌟 서버 화면에 맞는 옵션을 주입하여 검색 필터 초기화!
   const filterOptions = [
@@ -84,328 +74,257 @@ document.addEventListener("DOMContentLoaded", async () => {
     document.getElementById("server-search-filter"),
     filterOptions,
     () => {
-      currentPage = 0; // 검색이 발생하면 1페이지로 리셋
-      loadServers();
+      serverGrid.forceRender();
     }
   );
 
-  // 🌟 페이징 인스턴스 초기화
-  pagination = new Pagination(
-    document.querySelector("#server-pagination .pagination-container"),
-    (pageNo) => {
-      // 버튼이 클릭되면 이 콜백이 실행됨!
-      currentPage = pageNo;
-      loadServers();
-    }
-  );
-
-  updateSortIcons();
-  await loadHardwares(); // 하드웨어 매핑용
-  await loadCidrs(); // 🌟 IP 대역 로드
-  await loadServers();
+  await Promise.all([loadHardwares(), loadCidrs()]);
+  initGrid();
   setupEventListeners();
 });
 
-// 🌟 IP 대역 목록 로드 (Page 객체 대응)
-async function loadCidrs() {
-  try {
-    const responseData = await api.get("/api/v1/ip-cidrs?size=1000");
-    cidrList = responseData.content || []; // 🚨 핵심: .content 배열 추출
-
-    const options = cidrList
-      .map(
-        (cidr) =>
-          `<option value="${cidr.id}">${cidr.cidrBlock} (${
-            cidr.description || "이름 없음"
-          })</option>`
-      )
-      .join("");
-    selIpCidr.innerHTML =
-      `<option value="">-- 대역 선택 (연동 안함) --</option>` + options;
-  } catch (error) {
-    console.error("IP 대역 목록 로드 실패", error);
-  }
-}
-
-// 🌟 하드웨어 매핑 목록 로드 (Page 객체 대응)
 async function loadHardwares() {
   try {
-    // 콤보박스에 전체를 띄우기 위해 size를 넉넉히 줍니다.
-    const responseData = await api.get("/api/v1/hardwares?size=1000");
-    hardwareList = responseData.content || []; // 🚨 핵심: .content 배열 추출
-
-    const options = hardwareList
-      .filter((hw) => hw.equipmentType === "SERVER")
-      .map(
-        (hw) =>
-          `<option value="${hw.id}">[${hw.model}] ${hw.serialNo} (${hw.description}) </option>`
-      )
-      .join("");
-    selHardware.innerHTML =
-      `<option value="">-- 매핑 안 함 --</option>` + options;
-  } catch (error) {
-    console.error("하드웨어 목록 로드 실패", error);
+    const res = await api.get("/api/v1/hardwares?size=1000");
+    hardwareList = res.content || [];
+    if (selHardware) {
+      selHardware.innerHTML =
+        `<option value="">-- 매핑 안 함 (가상서버인 경우 생략) --</option>` +
+        hardwareList
+          .map(
+            (h) =>
+              `<option value="${h.id}">[${h.equipmentType}] ${h.model} (S/N: ${h.serialNo})</option>`
+          )
+          .join("");
+    }
+  } catch (e) {
+    console.error("하드웨어 로드 실패", e);
   }
 }
 
-async function loadServers() {
+async function loadCidrs() {
   try {
-    // 🌟 searchFilter 인스턴스에게 현재 쌓인 파라미터 문자열을 달라고 요청!
-    const filterParams = searchFilter.getQueryParams();
-    const sortParam = `&sort=${currentSortColumn},${currentSortDirection}`;
-    const url = `/api/v1/servers?page=${currentPage}&size=20${sortParam}${filterParams}`;
-
-    const responseData = await api.get(url);
-    serverList = responseData.content || [];
-
-    renderTable();
-    pagination.render(responseData.totalPages, responseData.number);
-  } catch (error) {
-    tableBody.innerHTML = `<tr><td colspan="8" style="text-align:center;color:red;">데이터 로드 실패</td></tr>`;
+    const res = await api.get("/api/v1/ip-cidrs?size=1000");
+    cidrList = res.content || [];
+  } catch (e) {
+    console.error("CIDR 로드 실패", e);
   }
 }
 
-// 🌟 2. 개별 필터 'X' 버튼 삭제 로직 (전역 함수로 등록하여 HTML 인라인에서 호출)
-window.removeFilter = (type) => {
-  activeFilters = activeFilters.filter((f) => f.type !== type);
-  currentPage = 0;
-  renderFilterChips();
-  loadServers();
-};
-
-// 🌟 3. 필터 태그(Chips) 시각화 렌더링
-function renderFilterChips() {
-  if (activeFilters.length === 0) {
-    filtersContainer.innerHTML =
-      '<span style="color: #95a5a6; font-size: 0.9rem;">적용된 필터가 없습니다.</span>';
-    return;
-  }
-
-  filtersContainer.innerHTML = activeFilters
-    .map(
-      (f) => `
-        <span style="display: inline-flex; align-items: center; background: #eaf2f8; color: #2980b9; padding: 6px 14px; border-radius: 20px; font-size: 0.85rem; border: 1px solid #b3d4fc; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
-            <strong style="margin-right: 6px; color:#2c3e50;">${f.label}:</strong> ${f.value}
-            <span onclick="window.removeFilter('${f.type}')" style="margin-left: 10px; cursor: pointer; color: #e74c3c; font-weight: bold; font-size: 1rem;" title="이 필터 지우기">✖</span>
-        </span>
-    `
-    )
-    .join("");
+// 🌟 prev가 undefined일 때를 대비한 안전망 함수 (버그 해결 핵심)
+function getSafeUrl(prev) {
+  if (typeof prev !== "undefined") return prev;
+  let filterParams =
+    typeof searchFilter !== "undefined" ? searchFilter.getQueryParams() : "";
+  if (filterParams === "?") filterParams = "";
+  return `/api/v1/servers${filterParams}`;
 }
 
-// --- Render Logic ---
-function getOsClass(osName) {
-  if (!osName) return "";
-  const lower = osName.toLowerCase();
-  if (lower.includes("win")) return "os-windows";
-  if (
-    lower.includes("linux") ||
-    lower.includes("centos") ||
-    lower.includes("ubuntu")
-  )
-    return "os-linux";
-  return "";
+// ==========================================
+// 🚀 Grid.js 초기화
+// ==========================================
+function initGrid() {
+  serverGrid = new gridjs.Grid({
+    columns: [
+      { id: "id", name: "ID", hidden: true },
+      {
+        id: "checkbox",
+        name: gridjs.html(
+          '<input type="checkbox" id="check-all" title="전체선택">'
+        ),
+        sort: false,
+        width: "60px",
+        formatter: (cell, row) =>
+          gridjs.html(
+            `<input type="checkbox" class="data-checkbox" value="${row.cells[0].data}">`
+          ),
+      },
+      { id: "environment", name: "환경", width: "100px" },
+      { id: "serverType", name: "유형", width: "100px" },
+      { id: "serverCategory", name: "분류", width: "120px" },
+      {
+        id: "hostName",
+        name: "서버명",
+        width: "250px",
+        formatter: (cell, row) =>
+          gridjs.html(
+            `<a href="javascript:void(0);" onclick="window.viewServerDetail(${
+              row.cells[0].data
+            })" style="color:var(--primary-color); font-weight:bold; text-decoration:underline;">${ui.escapeHtml(
+              cell
+            )}</a>`
+          ),
+      },
+      { id: "os", name: "OS", width: "180px" },
+      {
+        id: "spec",
+        name: "스펙(CPU/RAM)",
+        sort: false,
+        width: "150px",
+        formatter: (cell) =>
+          gridjs.html(`<b>${cell.cpu} Core</b> / ${cell.ram}GB`),
+      },
+      {
+        id: "actions",
+        name: "관리",
+        sort: false,
+        width: "130px",
+        formatter: (cell, row) =>
+          gridjs.html(`
+          <button class="btn small" onclick="window.openEditModal(${row.cells[0].data})">수정</button>
+          <button class="btn small danger" onclick="window.deleteServer(${row.cells[0].data})">삭제</button>
+        `),
+      },
+    ],
+    // 🌟 Grid.js 공식 Server-Side 파이프라인 (데이터 로드 주체)
+    server: {
+      url: "/api/v1/servers",
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem("accessToken") || ""}`,
+        "Content-Type": "application/json",
+      },
+      then: (data) =>
+        data.content.map((srv) => [
+          srv.id,
+          null,
+          srv.environment,
+          srv.serverType,
+          srv.serverCategory,
+          srv.hostName,
+          srv.os,
+          { cpu: srv.cpuCore, ram: srv.memoryGb },
+          null,
+        ]),
+      total: (data) => data.totalElements,
+    },
+    // 🌟 파이프라인 1. 검색 (URL 조립)
+    // search: {
+    //   server: {
+    //     url: (prev, keyword) => {
+    //       currentKeyword = keyword || ""; // 엑셀 다운로드를 위해 저장
+    //       if (!keyword) return prev;
+    //       const delim = prev.includes("?") ? "&" : "?";
+    //       return `${prev}${delim}keyword=${encodeURIComponent(keyword)}`;
+    //     },
+    //   },
+    // },
+    search: false,
+    // 🌟 파이프라인 2. 정렬 (URL 조립)
+    sort: {
+      multiColumn: false,
+      server: {
+        url: (prev, columns) => {
+          let sortString = "id,desc"; // 기본 정렬
+          if (columns && columns.length > 0) {
+            const col = columns[0];
+            const dir = col.direction === 1 ? "asc" : "desc";
+            const colIds = [
+              "id",
+              "checkbox",
+              "environment",
+              "serverType",
+              "serverCategory",
+              "hostName",
+              "os",
+              "spec",
+              "actions",
+            ];
+            sortString = `${colIds[col.index]},${dir}`;
+          }
+          currentSortParam = sortString; // 엑셀 다운로드를 위해 저장
+          return `${prev}?sort=${sortString}`;
+        },
+      },
+    },
+    // 🌟 파이프라인 3. 페이징 (URL 조립 - 이전 버그 완벽 해결 구간)
+    pagination: {
+      enabled: true,
+      limit: 20,
+      server: {
+        url: (prev, page, limit) => {
+          // 1) searchFilter에서 '?environment=PRD' 형태로 가져옴
+          let filterParams =
+            typeof searchFilter !== "undefined"
+              ? searchFilter.getQueryParams()
+              : "";
+
+          // 2) 이미 prev에 '?sort='가 붙어있으므로, 앞의 '?'를 '&'로 바꿔서 예쁘게 이어붙임
+          if (filterParams.startsWith("?")) {
+            filterParams = "&" + filterParams.substring(1);
+          }
+          if (filterParams === "&") filterParams = "";
+
+          // 3) 최종 URL 완성! (ex: /api/v1/servers?sort=id,desc&page=0&size=20&environment=PRD)
+          return `${prev}&page=${page}&size=${limit}${filterParams}`;
+        },
+      },
+    },
+    // 🌟 테이블 UI 강력 확장 옵션 🌟
+    fixedHeader: true, // 1) 헤더 고정
+    height: "500px", // 1-1) 고정 헤더를 위한 컨테이너 높이 지정
+    resizable: true, // 2) 컬럼 너비 드래그 조절
+    style: {
+      table: {
+        "white-space": "nowrap", // 3) 셀 줄바꿈 방지
+        "min-width": "600px", // 3-1) 화면이 작아도 1300px 유지 -> 가로 스크롤(Wide Table) 생성
+      },
+    },
+    className: { table: "akims-custom-table" },
+    language: {
+      pagination: {
+        previous: "이전",
+        next: "다음",
+        showing: "표시 중",
+        results: "결과",
+      },
+      noRecordsFound: "데이터가 존재하지 않습니다.",
+    },
+  }).render(serverGridContainer);
 }
 
-function getTypeBadge(type) {
-  if (type === "PHYSICAL") return "badge-physical";
-  if (type === "VIRTUAL") return "badge-vm";
-  if (type === "AWS_CLOUD") return "badge-aws-cloud";
-  if (type === "SCP_CLOUD") return "badge-scp-cloud";
-  return "";
-}
-
-// 🌟 동적으로 IP 입력 행(Row)을 생성하는 함수
-function createIpRow(cidrId = "", ip = "") {
-  const row = document.createElement("div");
-  row.className = "ip-row form-row";
-  row.style.marginBottom = "0";
-
-  const options = cidrList
-    .map(
-      (cidr) =>
-        `<option value="${cidr.id}" ${cidr.id == cidrId ? "selected" : ""}>${
-          cidr.cidrBlock
-        } (${cidr.description || "이름 없음"})</option>`
-    )
-    .join("");
-
-  row.innerHTML = `
-        <select class="ip-cidr-sel" style="flex:1;">
-            <option value="">-- 대역 선택 --</option>
-            ${options}
-        </select>
-        <input type="text" class="ip-address-input" placeholder="예: 10.10.10.15" value="${ip}" style="flex:1;">
-        <button type="button" class="btn small danger btn-remove-ip">X</button>
-    `;
-
-  row
-    .querySelector(".btn-remove-ip")
-    .addEventListener("click", () => row.remove());
-  ipListContainer.appendChild(row);
-}
-
-function createDiskRow(type = "SSD", capacity = 100, diskName = "") {
-  const row = document.createElement("div");
-  row.className = "disk-row form-row";
-  row.style.marginBottom = "0";
-
-  row.innerHTML = `
-        <select class="disk-type-sel" style="flex:1;">
-            <option value="HDD" ${type === "HDD" ? "selected" : ""}>HDD</option>
-            <option value="SSD" ${type === "SSD" ? "selected" : ""}>SSD</option>
-            <option value="NVME" ${
-              type === "NVME" ? "selected" : ""
-            }>NVMe</option>
-            <option value="SAN" ${
-              type === "SAN" ? "selected" : ""
-            }>SAN 스토리지</option>
-            <option value="NAS" ${
-              type === "NAS" ? "selected" : ""
-            }>NAS 마운트</option>
-        </select>
-        <input type="number" class="disk-cap-input" placeholder="용량(GB)" value="${capacity}" min="1" style="flex:1;">
-        
-        <input type="text" class="disk-name-input" placeholder="용도/이름 (예: OS, Data, rootvg)" value="${diskName}" style="flex:1.5;">
-        
-        <button type="button" class="btn small danger btn-remove-disk">X</button>
-    `;
-
-  row
-    .querySelector(".btn-remove-disk")
-    .addEventListener("click", () => row.remove());
-  diskListContainer.appendChild(row);
-}
-
-// 🌟 S/W 동적 행 생성
-function createSwRow(name = "", version = "", purpose = "") {
-  const row = document.createElement("div");
-  row.className = "sw-row form-row";
-  row.style.marginBottom = "0";
-  row.innerHTML = `
-        <input type="text" class="sw-name" placeholder="S/W명 (예: Tomcat)" value="${name}" style="flex:2;">
-        <input type="text" class="sw-version" placeholder="버전" value="${version}" style="flex:1;">
-        <input type="text" class="sw-purpose" placeholder="용도" value="${purpose}" style="flex:2;">
-        <button type="button" class="btn small danger btn-remove">X</button>
-    `;
-  row.querySelector(".btn-remove").onclick = () => row.remove();
-  swContainer.appendChild(row);
-}
-
-function renderTable() {
-  if (serverList.length === 0) {
-    tableBody.innerHTML = `<tr><td colspan="8" style="text-align:center;">등록된 서버가 없습니다.</td></tr>`;
-    return;
-  }
-
-  tableBody.innerHTML = serverList
-    .map((srv) => {
-      // 하드웨어 호스트 정보 매핑
-      const hwInfo = srv.hardwareId
-        ? (() => {
-            const hw = hardwareList.find((h) => h.id === srv.hardwareId);
-            return hw
-              ? `<strong>${hw.description}</strong><br><small style="color:#777;">(${hw.serialNo})</small>`
-              : "알 수 없음";
-          })()
-        : '<span style="color:#999;">- (클라우드/미할당) -</span>';
-
-      let ipDisplay = '<span style="color:#999;">미할당</span>';
-      if (srv.ips && srv.ips.length > 0) {
-        // N개의 IP를 줄바꿈(<br>)으로 표시
-        ipDisplay = srv.ips
-          .map((ipData) => `<strong>${ipData.ipAddress}</strong>`)
-          .join("<br>");
-      }
-      const safeDesc = ui.escapeHtml(srv.description || "-");
-      let diskDisplay =
-        srv.disks && srv.disks.length > 0
-          ? srv.disks
-              .map((d) => `<strong>${d.diskType} / ${d.size}GB</strong>`)
-              .join("<br>")
-          : '<span style="color:#999;">-</span>';
-      return `
-            <tr>
-                <td><input type="checkbox" class="data-checkbox srv-checkbox-item" data-id="${
-                  srv.id
-                }"></td>
-                <td>${srv.environment}</td>
-                
-                <td><span class="badge ${getTypeBadge(srv.serverType)}">${
-        srv.serverType
-      }</span></td>
-                <td>${srv.serverCategory}</td>
-                <td>
-                    <a href="#" onclick="window.viewServerDetail(${
-                      srv.id
-                    }); return false;" style="color: #2980b9; text-decoration: underline; font-weight: bold; font-size: 1.1rem;">
-                        ${ui.escapeHtml(srv.hostName)}
-                    </a>
-                    <br><small style="color:#777;">${ui.escapeHtml(
-                      srv.description || ""
-                    )}</small>
-                </td>
-                <td><span class="os-badge ${getOsClass(srv.os)}">${
-        srv.os
-      }</span></td>
-                
-                <td>${srv.cpuCore} Core / ${srv.memoryGb} GB</td>
-                <td>${ipDisplay}</td> <td>${hwInfo}</td>
-            </tr>
-        `;
-    })
-    .join("");
-}
-
-// --- Event Listeners ---
+// ==========================================
+// 🚀 이벤트 리스너
+// ==========================================
 function setupEventListeners() {
+  // 🌟 검색 필터의 [검색] 버튼 클릭 이벤트 연동 (Grid.js 강제 렌더링)
+  // const btnCustomSearch = document.getElementById("btn-search");
+  // if (btnCustomSearch) {
+  //   btnCustomSearch.addEventListener("click", () => {
+  //     // 1페이지부터 다시 조회
+  //     serverGrid.updateConfig({ pagination: { page: 0 } }).forceRender();
+  //   });
+  // }
+  // 모달 제어
   btnOpenModal.addEventListener("click", openCreateModal);
-  btnCancel.addEventListener("click", () => ui.closeModal("srv-modal"));
+  btnCancel.addEventListener("click", () => {
+    modalEdit.style.display = "none";
+  });
+  btnCloseDetail.addEventListener("click", () => {
+    serverDetailContainer.style.display = "none";
+  });
   btnSave.addEventListener("click", saveServer);
+
+  // 상단 액션 버튼
   btnEdit.addEventListener("click", handleEditAction);
   btnDelete.addEventListener("click", handleDeleteAction);
-  btnAddIp.addEventListener("click", () => createIpRow()); // 🌟 IP 추가 버튼
-  btnAddDisk.addEventListener("click", () => createDiskRow()); // 🌟 디스크 추가 버튼
+
+  // 동적 추가 버튼
+  btnAddIp.addEventListener("click", () => createIpRow());
+  btnAddDisk.addEventListener("click", () => createDiskRow());
   btnAddSw.addEventListener("click", () => createSwRow());
-  btnCloseDetail.addEventListener("click", () => {
-    detailContainer.style.display = "none";
-  });
-  btnSort.forEach((th) => {
-    th.addEventListener("click", () => {
-      const clickedColumn = th.getAttribute("data-sort");
 
-      if (currentSortColumn === clickedColumn) {
-        // 이미 선택된 컬럼이면 오름차순/내림차순 토글
-        currentSortDirection = currentSortDirection === "asc" ? "desc" : "asc";
-      } else {
-        // 새로운 컬럼을 클릭하면 오름차순(asc)으로 초기화
-        currentSortColumn = clickedColumn;
-        currentSortDirection = "asc";
-      }
-
-      updateSortIcons(); // 화살표 UI 갱신
-
-      // 정렬이 바뀌면 1페이지로 돌아가서 데이터 다시 불러오기
-      currentPage = 0;
-      loadServers();
-    });
+  // Grid 체크박스 위임
+  serverGridContainer.addEventListener("change", (e) => {
+    if (e.target.id === "check-all") {
+      const isChecked = e.target.checked;
+      document
+        .querySelectorAll(".data-checkbox")
+        .forEach((cb) => (cb.checked = isChecked));
+    }
   });
 
-  btnDownloadExcel.addEventListener("click", () => {
-    // 현재 검색된 필터 조건을 그대로 URL 파라미터로 가져옴
-    const filterParams = searchFilter.getQueryParams();
-    const sortParam = `sort=${currentSortColumn},${currentSortDirection}`; // & 없이 시작
-    // 브라우저의 기본 다운로드 동작을 유도하기 위해 window.location.href 사용
-    const exportUrl = `/api/v1/servers/excel/download?${sortParam}${filterParams}`;
-    window.location.href = exportUrl;
-  });
-
-  // 엑셀 업로드 버튼 클릭 시 숨겨진 file input 클릭
-  btnUploadExcel.addEventListener("click", () => {
-    excelFileInput.click();
-  });
-
-  // 파일이 선택되면 즉시 서버로 업로드 (Multipart form-data)
+  // 엑셀 업로드 (버튼 클릭 -> file input 클릭 트리거)
+  btnUploadExcel.addEventListener("click", () => excelFileInput.click());
   excelFileInput.addEventListener("change", async (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -414,47 +333,84 @@ function setupEventListeners() {
     formData.append("file", file);
 
     try {
-      // api.js 모듈이 JSON 전송 전용일 경우, 아래와 같이 fetch를 직접 호출
+      const token = localStorage.getItem("accessToken");
       const response = await fetch("/api/v1/servers/excel/upload", {
         method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
         body: formData,
-        // 주의: FormData 사용 시 Content-Type 헤더를 명시적으로 설정하지 않아야 브라우저가 boundary를 자동 생성합니다.
       });
-      const result = await response.json();
-
-      if (response.ok) {
-        alert("엑셀 데이터가 성공적으로 반영되었습니다.\n" + result.message);
-        loadServers(); // 업로드 성공 후 목록 새로고침
-      } else {
-        alert("엑셀 업로드 실패:\n" + result.message);
-      }
-    } catch (error) {
-      console.error("엑셀 업로드 에러", error);
-      alert("오류 발생: " + error.message);
-    } finally {
-      excelFileInput.value = ""; // 초기화하여 같은 파일 다시 선택 가능하게 함
+      if (!response.ok) throw new Error(await response.text());
+      ui.showAlert("엑셀 업로드가 완료되었습니다.");
+      excelFileInput.value = "";
+      serverGrid.forceRender();
+    } catch (err) {
+      ui.showAlert("업로드 실패: " + err.message);
     }
   });
 
-  ui.setupCheckAll("check-all", "srv-checkbox-item");
-
-  // 🌟 15년 차의 디테일: 서버 타입에 따른 동적 UI 변경
-  selType.addEventListener("change", (e) => {
-    if (e.target.value === "AWS" || e.target.value === "SCP") {
-      hardwareMappingArea.style.display = "none"; // 클라우드는 물리 장비 선택 안 함
-      selHardware.value = "";
-    } else {
-      hardwareMappingArea.style.display = "block"; // 물리/VM은 물리 장비 선택 창 노출
-    }
+  // 엑셀 다운로드
+  btnDownloadExcel.addEventListener("click", () => {
+    let url = `/api/v1/servers/excel/download?sort=${currentSortParam}`;
+    if (currentKeyword) url += `&keyword=${encodeURIComponent(currentKeyword)}`;
+    window.location.href = url;
   });
 }
 
-// --- Actions (Modal & API) ---
+// ==========================================
+// 🚀 선택 작업 (수정/삭제)
+// ==========================================
+function handleEditAction() {
+  const checked = Array.from(
+    document.querySelectorAll(".data-checkbox:checked")
+  );
+  if (checked.length !== 1) {
+    ui.showAlert("수정할 서버를 1개만 선택해주세요.");
+    return;
+  }
+  window.openEditModal(checked[0].value);
+}
+
+async function handleDeleteAction() {
+  const checked = Array.from(
+    document.querySelectorAll(".data-checkbox:checked")
+  );
+  if (checked.length === 0) {
+    ui.showAlert("삭제할 서버를 선택해주세요.");
+    return;
+  }
+  if (confirm(`선택한 ${checked.length}개의 서버를 삭제하시겠습니까?`)) {
+    try {
+      for (const cb of checked) {
+        await api.delete(`/api/v1/servers/${cb.value}`);
+      }
+      ui.showAlert("삭제되었습니다.");
+      serverGrid.forceRender();
+    } catch (e) {
+      ui.showAlert("삭제 중 오류가 발생했습니다.");
+    }
+  }
+}
+
+window.deleteServer = async (id) => {
+  if (confirm("정말로 이 서버를 삭제하시겠습니까?")) {
+    try {
+      await api.delete(`/api/v1/servers/${id}`);
+      ui.showAlert("삭제되었습니다.");
+      serverGrid.forceRender();
+    } catch (e) {
+      ui.showAlert("삭제 실패: " + e.message);
+    }
+  }
+};
+
+// ==========================================
+// 🚀 모달 (생성/수정/상세)
+// ==========================================
 function openCreateModal() {
   inputId.value = "";
   selCategory.value = "WEB";
   inputHostName.value = "";
-  selEnvironment.value = "PRD"; // 🌟 초기값
+  selEnvironment.value = "PRD";
   selType.value = "VIRTUAL";
   inputOs.value = "";
   inputCpu.value = 1;
@@ -464,279 +420,192 @@ function openCreateModal() {
   chkHa.checked = false;
   selBackup.value = "NO_BACKUP";
   selMonitoring.value = "NO_MONITORING";
-  ipListContainer.innerHTML = ""; // 초기화
-  createIpRow(); // 기본 1개 칸은 띄워줌
-  diskListContainer.innerHTML = "";
-  createDiskRow("SSD", 100, "/"); // 기본 OS 영역용으로 1개 띄워줌
-
-  hardwareMappingArea.style.display = "block";
-  ui.openModal("srv-modal", "modal-title", "새 서버 등록");
-}
-
-function openEditModal(id) {
-  const target = serverList.find((s) => s.id === id);
-  if (!target) return;
-
-  inputId.value = target.id;
-  selCategory.value = target.serverCategory;
-  inputHostName.value = target.hostName;
-  selEnvironment.value = target.environment || "PRD";
-  selType.value = target.serverType;
-  inputOs.value = target.os;
-  inputCpu.value = target.cpuCore || target.spec?.cpuCore || 1;
-  inputRam.value = target.memoryGb || target.spec?.memoryGb || 0.5;
-
-  chkHa.checked = target.ha;
-  selBackup.value = target.backupInfo || "NO_BACKUP";
-  selMonitoring.value = target.monitoringInfo || "NO_MONITORING";
 
   ipListContainer.innerHTML = "";
-
-  if (target.ips && target.ips.length > 0) {
-    target.ips.forEach((ipData) =>
-      createIpRow(ipData.ipCidrId, ipData.ipAddress)
-    );
-  } else {
-    createIpRow(); // 없으면 빈 칸 1개
-  }
-
   diskListContainer.innerHTML = "";
-  if (target.disks && target.disks.length > 0) {
-    target.disks.forEach((d) => createDiskRow(d.diskType, d.size, d.diskName));
-  } else {
-    createDiskRow();
-  }
-  swContainer.innerHTML = "";
-  if (target.softwares && target.softwares.length > 0) {
-    target.softwares.forEach((sw) =>
-      createSwRow(sw.name, sw.version, sw.purpose)
-    );
-  }
-  selHardware.value = target.hardwareId || "";
-  inputDesc.value = target.description || "";
+  swListContainer.innerHTML = "";
 
-  hardwareMappingArea.style.display =
-    target.serverType === "CLOUD" ? "none" : "block";
-  ui.openModal("srv-modal", "modal-title", "서버 정보 수정");
+  createIpRow();
+  createDiskRow("SSD", 100, "OS 영역");
+
+  document.getElementById("modal-title").innerText = "새 서버 등록";
+  modalEdit.style.display = "block";
 }
 
-function handleEditAction() {
-  const ids = ui.getCheckedIds("srv-checkbox-item"); // 🌟 ui 모듈로 선택된 ID 가져오기
-  if (ids.length !== 1) {
-    alert("수정할 항목을 1개만 선택해주세요.");
-    return;
-  }
-  openEditModal(parseInt(ids[0]));
-}
+window.openEditModal = async (id) => {
+  ipListContainer.innerHTML = "";
+  diskListContainer.innerHTML = "";
+  swListContainer.innerHTML = "";
 
-function closeModal() {
-  modal.style.display = "none";
-}
+  try {
+    const t = await api.get(`/api/v1/servers/${id}`);
+    inputId.value = t.id;
+    selHardware.value = t.hardwareId || "";
+    inputHostName.value = t.hostName || "";
+    selCategory.value = t.serverCategory || "WEB";
+    selEnvironment.value = t.environment || "PRD";
+    selType.value = t.serverType || "VIRTUAL";
+    inputOs.value = t.os || "";
+    inputDesc.value = t.description || "";
+    inputCpu.value = t.cpuCore || 1;
+    inputRam.value = t.memoryGb || 1;
+    chkHa.checked = t.ha || false;
+    selBackup.value = t.backupInfo || "NO_BACKUP";
+    selMonitoring.value = t.monitoringInfo || "NO_MONITORING";
+
+    if (t.ips && t.ips.length > 0)
+      t.ips.forEach((ip) => createIpRow(ip.cidrId, ip.ipAddress));
+    else createIpRow();
+
+    if (t.disks && t.disks.length > 0)
+      t.disks.forEach((d) => createDiskRow(d.diskType, d.size, d.diskName));
+    else createDiskRow();
+
+    if (t.softwares && t.softwares.length > 0)
+      t.softwares.forEach((sw) => createSwRow(sw.name, sw.version));
+
+    document.getElementById("modal-title").innerText = "서버 인스턴스 수정";
+    modalEdit.style.display = "block";
+  } catch (e) {
+    ui.showAlert("정보 로딩 실패");
+  }
+};
 
 async function saveServer() {
-  // 🌟 1. 다중 IP 데이터 수집 및 방어 로직(Validation)
+  // 연관 데이터(IP, Disk, SW) 추출
   const ips = [];
-  let hasIpError = false;
-
-  // 화면에 동적으로 생성된 모든 IP 입력 줄(.ip-row)을 검사합니다.
-  const ipRows = document.querySelectorAll(".ip-row");
-
-  for (const row of ipRows) {
+  document.querySelectorAll(".ip-row").forEach((row) => {
     const cidrId = row.querySelector(".ip-cidr-sel").value;
-    const ipAddr = row.querySelector(".ip-address-input").value.trim();
-
-    // 케이스 A: 둘 다 비어있으면 (IP 할당 안 함) -> 통과 (무시)
-    if (!cidrId && !ipAddr) continue;
-
-    // 🚨 케이스 B (방어 로직): IP 주소는 썼는데 대역(CIDR)을 안 고른 경우
-    if (!cidrId && ipAddr) {
-      alert(`입력하신 IP(${ipAddr})의 대역(CIDR)을 선택해주세요.`);
-      hasIpError = true;
-      break; // 루프 중단
-    }
-
-    // 🚨 케이스 C (방어 로직): 대역은 골랐는데 IP 주소를 안 쓴 경우
-    if (cidrId && !ipAddr) {
-      alert("선택하신 대역에 할당할 IP 주소를 입력해주세요.");
-      hasIpError = true;
-      break; // 루프 중단
-    }
-
-    // 케이스 D: 둘 다 정상적으로 입력됨 -> 전송할 배열에 추가
-    ips.push({ ipCidrId: parseInt(cidrId), ipAddress: ipAddr });
-  }
-
-  // 🌟 15년 차의 핵심: 유효성 검사 실패 시 백엔드 API를 호출하지 않고 함수 즉시 종료!
-  if (hasIpError) return;
+    const ipAddr = row.querySelector(".ip-addr-input").value.trim();
+    if (ipAddr)
+      ips.push({ cidrId: cidrId ? parseInt(cidrId) : null, ipAddress: ipAddr });
+  });
 
   const disks = [];
   document.querySelectorAll(".disk-row").forEach((row) => {
     const dType = row.querySelector(".disk-type-sel").value;
     const dCap = row.querySelector(".disk-cap-input").value;
     const dName = row.querySelector(".disk-name-input").value.trim();
-    if (dType && dCap) {
-      disks.push({
-        diskType: dType,
-        size: parseInt(dCap),
-        diskName: dName,
-      });
-    }
+    if (dType && dCap)
+      disks.push({ diskType: dType, size: parseInt(dCap), diskName: dName });
   });
-  // S/W 데이터 수집
+
   const softwares = [];
   document.querySelectorAll(".sw-row").forEach((row) => {
-    const n = row.querySelector(".sw-name").value.trim();
-    const v = row.querySelector(".sw-version").value.trim();
-    const p = row.querySelector(".sw-purpose").value.trim();
-    if (n && v)
-      softwares.push({
-        name: n,
-        version: v,
-        purpose: p,
-        maintenanceInfo: "",
-      });
+    const sName = row.querySelector(".sw-name-input").value.trim();
+    const sVer = row.querySelector(".sw-ver-input").value.trim();
+    if (sName) softwares.push({ name: sName, version: sVer });
   });
 
-  // ==============================================================
-  // 🌟 2. 기존 정상 저장 로직
-  // ==============================================================
-  if (
-    (selType.value === "PHYSICAL" || selType.value === "VIRTUAL") &&
-    selHardware.value === ""
-  ) {
-    alert(`하드웨어 정보는 필수입니다!`);
-    return; // 루프 중단
-  }
-  const hwIdVal = selHardware.value === "" ? null : parseInt(selHardware.value);
-
-  const requestData = {
+  const payload = {
+    hardwareId: selHardware.value || null,
     hostName: inputHostName.value.trim(),
-    environment: selEnvironment.value,
     serverCategory: selCategory.value,
+    environment: selEnvironment.value,
     serverType: selType.value,
     os: inputOs.value.trim(),
+    description: inputDesc.value.trim(),
     cpuCore: parseFloat(inputCpu.value),
     memoryGb: parseFloat(inputRam.value),
-    hardwareId: hwIdVal,
-    description: inputDesc.value.trim(),
-    ha: chkHa.checked,
-    backupInfo: selBackup.value.trim(),
-    monitoringInfo: selMonitoring.value.trim(),
-    ips: ips, // 🌟 검증을 무사히 통과한 N개의 IP 리스트 전송
+    isHa: chkHa.checked,
+    backupInfo: selBackup.value,
+    monitoringInfo: selMonitoring.value,
+    ips: ips,
     disks: disks,
     softwares: softwares,
   };
 
+  if (!payload.hostName) return ui.showAlert("서버명(HostName)은 필수입니다.");
+
   try {
-    if (inputId.value) {
-      await api.put(`/api/v1/servers/${inputId.value}`, requestData);
-      alert("수정되었습니다.");
+    const id = inputId.value;
+    if (id) {
+      await api.put(`/api/v1/servers/${id}`, payload);
+      ui.showAlert("수정되었습니다.");
     } else {
-      await api.post("/api/v1/servers", requestData);
-      alert("등록되었습니다.");
+      await api.post("/api/v1/servers", payload);
+      ui.showAlert("등록되었습니다.");
     }
-    ui.closeModal("srv-modal");
-    loadServers();
-    ui.clearCheckAll("check-all");
+    modalEdit.style.display = "none";
+    serverGrid.forceRender();
   } catch (error) {
-    // api.js가 백엔드 에러(예: 범위 불일치, 중복 등)를 처리하여 띄워줌
+    ui.showAlert("저장 실패: " + error.message);
   }
 }
 
-async function handleDeleteAction() {
-  const ids = ui.getCheckedIds("srv-checkbox-item"); // 🌟 ui 모듈 사용
-  if (ids.length === 0) {
-    alert("삭제할 항목을 선택해주세요.");
-    return;
-  }
-
-  if (!confirm(`선택한 ${ids.length}개의 장비를 정말 삭제하시겠습니까?`))
-    return;
-
+window.viewServerDetail = async (id) => {
   try {
-    for (const id of ids) await api.delete(`/api/v1/servers/${id}`);
-    alert("삭제되었습니다.");
-    loadServers();
-    ui.clearCheckAll("check-all"); // 🌟 전체 선택 해제도 ui 모듈로
-  } catch (error) {
-    console.error("삭제 실패", error);
-  }
-}
+    const srv = await api.get(`/api/v1/servers/${id}`);
 
-// 🌟 서버 상세 드릴다운 뷰 렌더링
-window.viewServerDetail = (id) => {
-  const srv = serverList.find((s) => s.id === id);
-  if (!srv) return;
+    // 1. 타이틀 설정
+    const envBadge =
+      srv.environment === "PRD"
+        ? '<span style="color:#c0392b;">[운영]</span>'
+        : '<span style="color:#27ae60;">[개발/검증]</span>';
+    detailTitle.innerHTML = `${envBadge} ${srv.hostName} / ${srv.description} 상세 자산 정보`;
 
-  // 1. 타이틀 설정
-  const envBadge =
-    srv.environment === "PRD"
-      ? '<span style="color:#c0392b;">[운영]</span>'
-      : '<span style="color:#27ae60;">[개발/검증]</span>';
-  detailTitle.innerHTML = `${envBadge} ${srv.hostName} / ${srv.description} 상세 자산 정보`;
-
-  // 2. 하드웨어/기본 정보 파싱
-  const hwInfo = srv.hardwareId
-    ? `
+    // 2. 하드웨어/기본 정보 파싱
+    const hwInfo = srv.hardwareId
+      ? `
     <div style="margin-bottom: 8px;"><strong>위치: </strong> ${srv.locationName}</div>
     <div style="margin-bottom: 8px;"><strong>랙정보: </strong> ${srv.rackNo}</div>
     <div style="margin-bottom: 8px;"><strong>하드웨어 정보: </strong> ${srv.hardwareDescription}</div>
     <div style="margin-bottom: 8px;"><strong>모델: </strong> ${srv.hardwareModel}</div>
     <div style="margin-bottom: 8px;"><strong>시리얼넘버: </strong> ${srv.serialNo}</div>
     `
-    : '<span style="color:#999;">클라우드 / 가상화 (미할당)</span>';
+      : '<span style="color:#999;">클라우드 / 가상화 (미할당)</span>';
 
-  // 3. 디스크 정보 파싱
-  const disks =
-    srv.disks && srv.disks.length > 0
-      ? srv.disks
-          .map(
-            (d) =>
-              `<div style="margin-bottom:4px;">[${d.diskType}] <strong>${d.size}GB</strong> <code style="font-size:0.8rem;">${d.diskName}</code></div>`
-          )
-          .join("")
-      : '<span style="color:#999;">등록된 디스크 없음</span>';
+    // 3. 디스크 정보 파싱
+    const disks =
+      srv.disks && srv.disks.length > 0
+        ? srv.disks
+            .map(
+              (d) =>
+                `<div style="margin-bottom:4px;">[${d.diskType}] <strong>${d.size}GB</strong> <code style="font-size:0.8rem;">${d.diskName}</code></div>`
+            )
+            .join("")
+        : '<span style="color:#999;">등록된 디스크 없음</span>';
 
-  // 4. 소프트웨어 및 DBMS 정보 파싱
-  const sw =
-    srv.softwares && srv.softwares.length > 0
-      ? srv.softwares
-          .map(
-            (s) =>
-              `<div>• ${s.name} <small style="color:#777;">(${
-                s.version || "v.알수없음"
-              })</small></div>`
-          )
-          .join("")
-      : '<span style="color:#999;">등록된 S/W 없음</span>';
+    // 4. 소프트웨어 및 DBMS 정보 파싱
+    const sw =
+      srv.softwares && srv.softwares.length > 0
+        ? srv.softwares
+            .map(
+              (s) =>
+                `<div>• ${s.name} <small style="color:#777;">(${
+                  s.version || "v.알수없음"
+                })</small></div>`
+            )
+            .join("")
+        : '<span style="color:#999;">등록된 S/W 없음</span>';
 
-  const dbms =
-    srv.dbmses && srv.dbmses.length > 0
-      ? srv.dbmses
-          .map(
-            (d) =>
-              `<div>• <strong style="color:#8e44ad;">${
-                d.name
-              }</strong> <small style="color:#777;">(${
-                d.version || ""
-              })</small></div>`
-          )
-          .join("")
-      : '<span style="color:#999;">등록된 DBMS 없음</span>';
+    const dbms =
+      srv.dbmses && srv.dbmses.length > 0
+        ? srv.dbmses
+            .map(
+              (d) =>
+                `<div>• <strong style="color:#8e44ad;">${
+                  d.name
+                }</strong> <small style="color:#777;">(${
+                  d.version || ""
+                })</small></div>`
+            )
+            .join("")
+        : '<span style="color:#999;">등록된 DBMS 없음</span>';
 
-  // 5. 4분할 카드 렌더링
-  detailContent.innerHTML = `
+    // 5. 4분할 카드 렌더링
+    detailContent.innerHTML = `
         <div style="background: #f8f9fa; padding: 15px; border-radius: 6px; border: 1px solid #e0e0e0;">
             <h4 style="border-bottom: 2px solid #bdc3c7; padding-bottom: 8px; margin-bottom: 12px; color: #2c3e50;">기본 스펙</h4>
-            <div style="margin-bottom: 8px;"><strong>OS:</strong> <span class="os-badge ${getOsClass(
+            <div style="margin-bottom: 8px;"><strong>OS:</strong> <span class="os-badge ${
               srv.os
-            )}">${srv.os}</span></div>
+            }">${srv.os}</span></div>
             <div style="margin-bottom: 8px;"><strong>CPU/RAM:</strong> ${
               srv.cpuCore
             } Core / ${srv.memoryGb} GB</div>
-            <div style="margin-bottom: 8px;"><strong>유형:</strong> <span class="badge ${getTypeBadge(
+            <div style="margin-bottom: 8px;"><strong>유형:</strong> <span class="badge ${
               srv.serverType
-            )}">${srv.serverType}</span></div>
+            }">${srv.serverType}</span></div>
             <div style="margin-bottom: 8px;"><strong>HA 구성:</strong> ${
               srv.ha
                 ? '<span style="color:#e74c3c; font-weight:bold;">Active (이중화)</span>'
@@ -790,25 +659,103 @@ window.viewServerDetail = (id) => {
         </div>
     `;
 
-  // 6. 컨테이너 노출 및 스크롤 이동
-  detailContainer.style.display = "block";
-  detailContainer.scrollIntoView({ behavior: "smooth", block: "start" });
+    // 6. 컨테이너 노출 및 스크롤 이동
+    serverDetailContainer.style.display = "block";
+    serverDetailContainer.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+  } catch (error) {
+    ui.showAlert("상세 로딩 실패");
+  }
 };
 
-// 🌟 현재 정렬 상태에 따라 테이블 헤더의 화살표(▲/▼) 아이콘을 업데이트하는 함수
-function updateSortIcons() {
-  document.querySelectorAll("th.sortable").forEach((th) => {
-    const icon = th.querySelector(".sort-icon");
-    if (!icon) return;
+// ==========================================
+// 🚀 동적 추가 행 렌더러 (IP, Disk, SW)
+// ==========================================
+function createIpRow(cidrId = "", ipAddress = "") {
+  const row = document.createElement("div");
+  row.className = "ip-row form-row";
+  row.style.cssText = "margin-bottom:0; display:flex; gap:10px;";
+  const cidrOptions = cidrList
+    .map(
+      (c) =>
+        `<option value="${c.id}" ${c.id == cidrId ? "selected" : ""}>${
+          c.cidrBlock
+        } (${c.description || ""})</option>`
+    )
+    .join("");
+  row.innerHTML = `
+    <select class="ip-cidr-sel form-control" style="flex:1;"><option value="">-- 대역 선택 --</option>${cidrOptions}</select>
+    <input type="text" class="ip-addr-input form-control" placeholder="IP 주소 (예: 192.168.1.10)" value="${ipAddress}" style="flex:1;">
+    <button type="button" class="btn small danger btn-remove">X</button>`;
+  row
+    .querySelector(".btn-remove")
+    .addEventListener("click", () => row.remove());
+  ipListContainer.appendChild(row);
+}
 
-    if (th.getAttribute("data-sort") === currentSortColumn) {
-      // 현재 정렬 중인 컬럼
-      icon.innerHTML = currentSortDirection === "asc" ? "▲" : "▼";
-      icon.style.color = "var(--primary-color)"; // 활성화된 색상 (파란색 등)
-    } else {
-      // 정렬되지 않은 컬럼
-      icon.innerHTML = "↕";
-      icon.style.color = "#bdc3c7"; // 비활성화 색상 (회색)
-    }
-  });
+function createDiskRow(type = "SSD", capacity = 100, diskName = "") {
+  const row = document.createElement("div");
+  row.className = "disk-row form-row";
+  row.style.cssText = "margin-bottom:0; display:flex; gap:10px;";
+  row.innerHTML = `
+    <select class="disk-type-sel form-control" style="flex:1;">
+      <option value="HDD" ${type === "HDD" ? "selected" : ""}>HDD</option>
+      <option value="SSD" ${type === "SSD" ? "selected" : ""}>SSD</option>
+      <option value="NVME" ${type === "NVME" ? "selected" : ""}>NVMe</option>
+      <option value="SAN" ${
+        type === "SAN" ? "selected" : ""
+      }>SAN 스토리지</option>
+    </select>
+    <input type="number" class="disk-cap-input form-control" placeholder="용량(GB)" value="${capacity}" min="1" style="flex:1;">
+    <input type="text" class="disk-name-input form-control" placeholder="용도 (예: OS, Data)" value="${diskName}" style="flex:1.5;">
+    <button type="button" class="btn small danger btn-remove">X</button>`;
+  row
+    .querySelector(".btn-remove")
+    .addEventListener("click", () => row.remove());
+  diskListContainer.appendChild(row);
+}
+
+function createSwRow(name = "", version = "") {
+  const row = document.createElement("div");
+  row.className = "sw-row form-row";
+  row.style.cssText = "margin-bottom:0; display:flex; gap:10px;";
+  row.innerHTML = `
+    <input type="text" class="sw-name-input form-control" placeholder="S/W명 (예: Apache)" value="${name}" style="flex:1;">
+    <input type="text" class="sw-ver-input form-control" placeholder="버전 (예: 2.4)" value="${version}" style="flex:1;">
+    <button type="button" class="btn small danger btn-remove">X</button>`;
+  row
+    .querySelector(".btn-remove")
+    .addEventListener("click", () => row.remove());
+  swListContainer.appendChild(row);
+}
+
+// 검색 관련 모듈
+// 🌟 2. 개별 필터 'X' 버튼 삭제 로직 (전역 함수로 등록하여 HTML 인라인에서 호출)
+window.removeFilter = (type) => {
+  activeFilters = activeFilters.filter((f) => f.type !== type);
+  currentPage = 0;
+  renderFilterChips();
+  loadServers();
+};
+
+// 🌟 3. 필터 태그(Chips) 시각화 렌더링
+function renderFilterChips() {
+  if (activeFilters.length === 0) {
+    filtersContainer.innerHTML =
+      '<span style="color: #95a5a6; font-size: 0.9rem;">적용된 필터가 없습니다.</span>';
+    return;
+  }
+
+  filtersContainer.innerHTML = activeFilters
+    .map(
+      (f) => `
+        <span style="display: inline-flex; align-items: center; background: #eaf2f8; color: #2980b9; padding: 6px 14px; border-radius: 20px; font-size: 0.85rem; border: 1px solid #b3d4fc; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+            <strong style="margin-right: 6px; color:#2c3e50;">${f.label}:</strong> ${f.value}
+            <span onclick="window.removeFilter('${f.type}')" style="margin-left: 10px; cursor: pointer; color: #e74c3c; font-weight: bold; font-size: 1rem;" title="이 필터 지우기">✖</span>
+        </span>
+    `
+    )
+    .join("");
 }

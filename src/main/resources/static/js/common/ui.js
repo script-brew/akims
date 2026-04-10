@@ -57,4 +57,8 @@ export const ui = {
       .replace(/"/g, "&quot;")
       .replace(/'/g, "&#039;");
   },
+
+  showAlert(message) {
+    alert(message);
+  },
 };

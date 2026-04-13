@@ -2,8 +2,10 @@ import { api } from "../common/api.js";
 import { ui } from "../common/ui.js";
 
 import { SearchFilter } from "../common/search-filter.js";
-import { Pagination } from "../common/pagination.js";
 
+const ndGridContainer = document.getElementById(
+  "network-device-grid-container"
+);
 // --- DOM Elements ---
 const tableBody = document.getElementById("nd-table-body");
 
@@ -32,9 +34,12 @@ const excelFileInput = document.getElementById("excel-file-input");
 let deviceList = [];
 let hardwareList = [];
 let cidrList = [];
+let ndGrid;
 
-let searchFilter, pagination;
-let currentPage = 0;
+let currentSortParam = "id,desc";
+let currentKeyword = "";
+let activeFilters = [];
+let searchFilter; // 🌟 필터 인스턴스 변수
 
 document.addEventListener("DOMContentLoaded", async () => {
   const filterOptions = [
@@ -47,21 +52,14 @@ document.addEventListener("DOMContentLoaded", async () => {
     document.getElementById("network-search-filter"),
     filterOptions,
     () => {
-      currentPage = 0;
-      loadNetworkDevices();
+      ndGrid.forceRender();
     }
   );
 
-  pagination = new Pagination(
-    document.querySelector("#network-pagination .pagination-container"),
-    (pageNo) => {
-      currentPage = pageNo;
-      loadNetworkDevices();
-    }
-  );
-  await loadHardwares();
-  await loadCidrs();
-  await loadNetworkDevices();
+  loadHardwares();
+  loadCidrs();
+  // await loadNetworkDevices();
+  initGrid();
   setupEventListeners();
 });
 
@@ -119,7 +117,183 @@ function setupEventListeners() {
       excelFileInput.value = ""; // 초기화하여 같은 파일 다시 선택 가능하게 함
     }
   });
+
+  // Grid 체크박스 위임
+  ndGridContainer.addEventListener("change", (e) => {
+    if (e.target.id === "check-all") {
+      const isChecked = e.target.checked;
+      document
+        .querySelectorAll(".data-checkbox")
+        .forEach((cb) => (cb.checked = isChecked));
+    }
+  });
+
   ui.setupCheckAll("check-all", "nd-checkbox-item");
+}
+
+// ==========================================
+// 🚀 Grid.js 초기화
+// ==========================================
+function initGrid() {
+  ndGrid = new gridjs.Grid({
+    columns: [
+      { id: "id", name: "ID", hidden: true },
+      {
+        id: "checkbox",
+        name: gridjs.html(
+          '<input type="checkbox" id="check-all" title="전체선택">'
+        ),
+        sort: false,
+        width: "60px",
+        formatter: (cell, row) =>
+          gridjs.html(
+            `<input type="checkbox" class="data-checkbox" value="${row.cells[0].data}">`
+          ),
+      },
+      { id: "category", name: "유형", width: "100px" },
+      {
+        id: "name",
+        name: "장비명",
+        width: "250px",
+        formatter: (cell, row) =>
+          gridjs.html(
+            `<a href="javascript:void(0);" onclick="window.viewNetworkDeviceDetail(${
+              row.cells[0].data
+            })" style="color:var(--primary-color); font-weight:bold; text-decoration:underline;">${ui.escapeHtml(
+              cell
+            )}</a>`
+          ),
+      },
+      { id: "os", name: "OS", width: "180px" },
+      {
+        id: "ips",
+        name: "IP 주소",
+        sort: false,
+        width: "200px",
+        // 🌟 여러 IP를 뱃지 형태로 나열
+        formatter: (cell) => {
+          if (!cell || cell.length === 0)
+            return gridjs.html('<span style="color:#ccc;">-</span>');
+          const badges = cell
+            .map(
+              (ip) =>
+                `<code style="background:#eaf2f8; color:#2980b9; padding:2px 5px; border-radius:3px; font-size:0.8rem; margin-right:3px;">${ip.ipAddress}</code>`
+            )
+            .join("");
+          return gridjs.html(
+            `<div style="display:flex; flex-wrap:wrap; gap:2px;">${badges}</div>`
+          );
+        },
+      },
+      {
+        id: "hardware",
+        name: "연결 하드웨어",
+        sort: false,
+        width: "250px",
+        // 🌟 hardwareId를 이용해 hardwareList에서 모델 정보 매핑
+        formatter: (cell) => {
+          if (!cell)
+            return gridjs.html('<span style="color:#ccc;">미매핑</span>');
+          const hw = hardwareList.find((h) => h.id === cell);
+          if (!hw)
+            return gridjs.html(
+              '<span style="color:#e67e22;">알 수 없음</span>'
+            );
+          return gridjs.html(
+            `<div title="S/N: ${hw.serialNo}" style="font-size:0.85rem;"><b>${hw.description}</b><br/><small style="color:#7f8c8d;">${hw.serialNo}</small></div>`
+          );
+        },
+      },
+    ],
+    // 🌟 Grid.js 공식 Server-Side 파이프라인 (데이터 로드 주체)
+    server: {
+      url: "/api/v1/network-devices",
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem("accessToken") || ""}`,
+        "Content-Type": "application/json",
+      },
+      then: (data) =>
+        data.content.map((nd) => [
+          nd.id,
+          null,
+          nd.category,
+          nd.name,
+          nd.os,
+          nd.ips,
+          nd.hardwareId,
+        ]),
+      total: (data) => data.totalElements,
+    },
+    search: false,
+    // 🌟 파이프라인 2. 정렬 (URL 조립)
+    sort: {
+      multiColumn: false,
+      server: {
+        url: (prev, columns) => {
+          let sortString = "id,desc"; // 기본 정렬
+          if (columns && columns.length > 0) {
+            const col = columns[0];
+            const dir = col.direction === 1 ? "asc" : "desc";
+            const colIds = [
+              "id",
+              "checkbox",
+              "category",
+              "name",
+              "os",
+              "ips",
+              "hardware",
+            ];
+            sortString = `${colIds[col.index]},${dir}`;
+          }
+          currentSortParam = sortString; // 엑셀 다운로드를 위해 저장
+          return `${prev}?sort=${sortString}`;
+        },
+      },
+    },
+    // 🌟 파이프라인 3. 페이징 (URL 조립 - 이전 버그 완벽 해결 구간)
+    pagination: {
+      enabled: true,
+      limit: 20,
+      server: {
+        url: (prev, page, limit) => {
+          // 1) searchFilter에서 '?environment=PRD' 형태로 가져옴
+          let filterParams =
+            typeof searchFilter !== "undefined"
+              ? searchFilter.getQueryParams()
+              : "";
+
+          // 2) 이미 prev에 '?sort='가 붙어있으므로, 앞의 '?'를 '&'로 바꿔서 예쁘게 이어붙임
+          if (filterParams.startsWith("?")) {
+            filterParams = "&" + filterParams.substring(1);
+          }
+          if (filterParams === "&") filterParams = "";
+
+          // 3) 최종 URL 완성! (ex: /api/v1/servers?sort=id,desc&page=0&size=20&environment=PRD)
+          return `${prev}&page=${page}&size=${limit}${filterParams}`;
+        },
+      },
+    },
+    // 🌟 테이블 UI 강력 확장 옵션 🌟
+    fixedHeader: true, // 1) 헤더 고정
+    height: "500px", // 1-1) 고정 헤더를 위한 컨테이너 높이 지정
+    resizable: true, // 2) 컬럼 너비 드래그 조절
+    style: {
+      table: {
+        "white-space": "nowrap", // 3) 셀 줄바꿈 방지
+        "min-width": "600px", // 3-1) 화면이 작아도 1300px 유지 -> 가로 스크롤(Wide Table) 생성
+      },
+    },
+    className: { table: "akims-custom-table" },
+    language: {
+      pagination: {
+        previous: "이전",
+        next: "다음",
+        showing: "표시 중",
+        results: "결과",
+      },
+      noRecordsFound: "데이터가 존재하지 않습니다.",
+    },
+  }).render(ndGridContainer);
 }
 
 // --- API Loaders ---
@@ -175,8 +349,8 @@ async function loadNetworkDevices() {
     const responseData = await api.get(url);
     deviceList = responseData.content || [];
 
-    renderTable();
-    pagination.render(responseData.totalPages, responseData.number);
+    // renderTable();
+    // pagination.render(responseData.totalPages, responseData.number);
   } catch (e) {
     tableBody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:red;">데이터 로드 실패</td></tr>`;
   }

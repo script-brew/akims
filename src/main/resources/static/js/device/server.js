@@ -47,6 +47,7 @@ const btnAddIp = document.getElementById("btn-add-ip");
 const diskListContainer = document.getElementById("disk-list-container");
 const btnAddDisk = document.getElementById("btn-add-disk");
 const swListContainer = document.getElementById("sw-list-container");
+const hardwareMappingArea = document.getElementById("hardware-mapping-area");
 const btnAddSw = document.getElementById("btn-add-sw");
 
 // --- 2. State ---
@@ -78,7 +79,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   );
 
-  await Promise.all([loadHardwares(), loadCidrs()]);
+  loadHardwares();
+  loadCidrs();
   initGrid();
   setupEventListeners();
 });
@@ -93,7 +95,7 @@ async function loadHardwares() {
         hardwareList
           .map(
             (h) =>
-              `<option value="${h.id}">[${h.equipmentType}] ${h.model} (S/N: ${h.serialNo})</option>`
+              `<option value="${h.id}">[${h.model}] ${h.serialNo} (이름: ${h.description})</option>`
           )
           .join("");
     }
@@ -157,23 +159,53 @@ function initGrid() {
       },
       { id: "os", name: "OS", width: "180px" },
       {
-        id: "spec",
-        name: "스펙(CPU/RAM)",
-        sort: false,
+        id: "cpu",
+        name: "CPU",
         width: "150px",
-        formatter: (cell) =>
-          gridjs.html(`<b>${cell.cpu} Core</b> / ${cell.ram}GB`),
       },
       {
-        id: "actions",
-        name: "관리",
+        id: "memory",
+        name: "Memory",
+        width: "150px",
+      },
+      {
+        id: "ips",
+        name: "IP 주소",
         sort: false,
-        width: "130px",
-        formatter: (cell, row) =>
-          gridjs.html(`
-          <button class="btn small" onclick="window.openEditModal(${row.cells[0].data})">수정</button>
-          <button class="btn small danger" onclick="window.deleteServer(${row.cells[0].data})">삭제</button>
-        `),
+        width: "200px",
+        // 🌟 여러 IP를 뱃지 형태로 나열
+        formatter: (cell) => {
+          if (!cell || cell.length === 0)
+            return gridjs.html('<span style="color:#ccc;">-</span>');
+          const badges = cell
+            .map(
+              (ip) =>
+                `<code style="background:#eaf2f8; color:#2980b9; padding:2px 5px; border-radius:3px; font-size:0.8rem; margin-right:3px;">${ip.ipAddress}</code>`
+            )
+            .join("");
+          return gridjs.html(
+            `<div style="display:flex; flex-wrap:wrap; gap:2px;">${badges}</div>`
+          );
+        },
+      },
+      {
+        id: "hardware",
+        name: "연결 하드웨어",
+        sort: false,
+        width: "250px",
+        // 🌟 hardwareId를 이용해 hardwareList에서 모델 정보 매핑
+        formatter: (cell) => {
+          if (!cell)
+            return gridjs.html('<span style="color:#ccc;">미매핑</span>');
+          const hw = hardwareList.find((h) => h.id === cell);
+          if (!hw)
+            return gridjs.html(
+              '<span style="color:#e67e22;">알 수 없음</span>'
+            );
+          return gridjs.html(
+            `<div title="S/N: ${hw.serialNo}" style="font-size:0.85rem;"><b>${hw.description}</b><br/><small style="color:#7f8c8d;">${hw.serialNo}</small></div>`
+          );
+        },
       },
     ],
     // 🌟 Grid.js 공식 Server-Side 파이프라인 (데이터 로드 주체)
@@ -192,22 +224,13 @@ function initGrid() {
           srv.serverCategory,
           srv.hostName,
           srv.os,
-          { cpu: srv.cpuCore, ram: srv.memoryGb },
-          null,
+          srv.cpuCore,
+          srv.memoryGb,
+          srv.ips, // IP 목록 (Array)
+          srv.hardwareId, // 연결된 하드웨어 ID
         ]),
       total: (data) => data.totalElements,
     },
-    // 🌟 파이프라인 1. 검색 (URL 조립)
-    // search: {
-    //   server: {
-    //     url: (prev, keyword) => {
-    //       currentKeyword = keyword || ""; // 엑셀 다운로드를 위해 저장
-    //       if (!keyword) return prev;
-    //       const delim = prev.includes("?") ? "&" : "?";
-    //       return `${prev}${delim}keyword=${encodeURIComponent(keyword)}`;
-    //     },
-    //   },
-    // },
     search: false,
     // 🌟 파이프라인 2. 정렬 (URL 조립)
     sort: {
@@ -226,8 +249,10 @@ function initGrid() {
               "serverCategory",
               "hostName",
               "os",
-              "spec",
-              "actions",
+              "cpu",
+              "memory",
+              "ips",
+              "hardware",
             ];
             sortString = `${colIds[col.index]},${dir}`;
           }
@@ -312,6 +337,14 @@ function setupEventListeners() {
   btnAddIp.addEventListener("click", () => createIpRow());
   btnAddDisk.addEventListener("click", () => createDiskRow());
   btnAddSw.addEventListener("click", () => createSwRow());
+  selType.addEventListener("change", (e) => {
+    if (e.target.value === "AWS_CLOUD" || e.target.value === "SCP_CLOUD") {
+      hardwareMappingArea.style.display = "none"; // 클라우드는 물리 장비 선택 안 함
+      selHardware.value = "";
+    } else {
+      hardwareMappingArea.style.display = "block"; // 물리/VM은 물리 장비 선택 창 노출
+    }
+  });
 
   // Grid 체크박스 위임
   serverGridContainer.addEventListener("change", (e) => {
@@ -367,7 +400,7 @@ function handleEditAction() {
     ui.showAlert("수정할 서버를 1개만 선택해주세요.");
     return;
   }
-  window.openEditModal(checked[0].value);
+  openEditModal(checked[0].value);
 }
 
 async function handleDeleteAction() {
@@ -428,11 +461,12 @@ function openCreateModal() {
   createIpRow();
   createDiskRow("SSD", 100, "OS 영역");
 
+  hardwareMappingArea.style.display = "block";
   document.getElementById("modal-title").innerText = "새 서버 등록";
   modalEdit.style.display = "block";
 }
 
-window.openEditModal = async (id) => {
+async function openEditModal(id) {
   ipListContainer.innerHTML = "";
   diskListContainer.innerHTML = "";
   swListContainer.innerHTML = "";
@@ -464,12 +498,16 @@ window.openEditModal = async (id) => {
     if (t.softwares && t.softwares.length > 0)
       t.softwares.forEach((sw) => createSwRow(sw.name, sw.version));
 
-    document.getElementById("modal-title").innerText = "서버 인스턴스 수정";
-    modalEdit.style.display = "block";
+    hardwareMappingArea.style.display =
+      t.serverType === "AWS_CLOUD" || t.serverType === "SCP_CLOUD"
+        ? "none"
+        : "block";
+
+    ui.openModal("srv-modal", "modal-title", "서버 정보 수정");
   } catch (e) {
     ui.showAlert("정보 로딩 실패");
   }
-};
+}
 
 async function saveServer() {
   // 연관 데이터(IP, Disk, SW) 추출

@@ -7,6 +7,8 @@
     <link rel="stylesheet" th:href="@{/css/layout.css}" />
     <link rel="stylesheet" th:href="@{/css/components.css}" />
     <link rel="stylesheet" th:href="@{/css/domain/device/network-device.css}" />
+    <link th:href="@{/css/lib/mermaid.min.css}" rel="stylesheet" />
+    <script th:src="@{/js/lib/gridjs.umd.js}"></script>
   </head>
   <body>
     <header th:replace="~{layout/header :: headerFragment}"></header>
@@ -54,28 +56,7 @@
           th:insert="~{components/search-filter :: searchFilterFragment}"
         ></div>
 
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th width="4%">
-                <input type="checkbox" id="check-all" class="data-checkbox" />
-              </th>
-              <th width="20%">장비명 (Device Name)</th>
-              <th width="10%">장비 구분</th>
-              <th width="15%">운영체제(OS)</th>
-              <th width="10%">할당 IP (관리용)</th>
-              <th width="20%">물리 호스트 (Hardware) 매핑</th>
-              <th width="21%">설명 / 비고</th>
-            </tr>
-          </thead>
-          <tbody id="nd-table-body">
-            <tr>
-              <td colspan="8" style="text-align: center">
-                데이터를 불러오는 중입니다...
-              </td>
-            </tr>
-          </tbody>
-        </table>
+        <div id="network-device-grid-container" style="margin-top: 20px"></div>
 
         <div
           id="network-pagination"

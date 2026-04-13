@@ -1,60 +1,105 @@
-2026-04-01 13:18:47.263523+09:00 jdbc[3]: exception
-org.h2.jdbc.JdbcSQLSyntaxErrorException: Column "HOST_NAME" not found; SQL statement:
-
-    alter table if exists server 
-       add constraint UKsmfma5wlkp439yv5oxpeb7ipe unique (host [42122-240]
+2026-04-08 16:13:27.432313+09:00 jdbc[13]: exception
+org.h2.jdbc.JdbcSQLSyntaxErrorException: Column "shelf" not found; SQL statement:
+SELECT * FROM HARDWARE 
+where model = "shelf" [42122-240]
 	at org.h2.message.DbException.getJdbcSQLException(DbException.java:514)
 	at org.h2.message.DbException.getJdbcSQLException(DbException.java:489)
 	at org.h2.message.DbException.get(DbException.java:223)
 	at org.h2.message.DbException.get(DbException.java:199)
-	at org.h2.table.Table.getColumn(Table.java:778)
-	at org.h2.table.IndexColumn.mapColumns(IndexColumn.java:184)
-	at org.h2.command.ddl.AlterTableAddConstraint.tryUpdate(AlterTableAddConstraint.java:176)
-	at org.h2.command.ddl.AlterTableAddConstraint.update(AlterTableAddConstraint.java:74)
-	at org.h2.command.ddl.AlterTable.update(AlterTable.java:46)
-	at org.h2.command.CommandContainer.update(CommandContainer.java:139)
-	at org.h2.command.Command.executeUpdate(Command.java:306)
-	at org.h2.command.Command.executeUpdate(Command.java:250)
-	at org.h2.jdbc.JdbcStatement.executeInternal(JdbcStatement.java:262)
+	at org.h2.expression.ExpressionColumn.getColumnException(ExpressionColumn.java:244)
+	at org.h2.expression.ExpressionColumn.optimizeOther(ExpressionColumn.java:226)
+	at org.h2.expression.ExpressionColumn.optimize(ExpressionColumn.java:213)
+	at org.h2.expression.condition.Comparison.optimize(Comparison.java:149)
+	at org.h2.expression.Expression.optimizeCondition(Expression.java:149)
+	at org.h2.command.query.Select.prepareExpressions(Select.java:1215)
+	at org.h2.command.query.Query.prepare(Query.java:235)
+	at org.h2.command.Parser.prepareCommand(Parser.java:492)
+	at org.h2.engine.SessionLocal.prepareLocal(SessionLocal.java:647)
+	at org.h2.engine.SessionLocal.prepareCommand(SessionLocal.java:563)
+	at org.h2.jdbc.JdbcConnection.prepareCommand(JdbcConnection.java:1160)
+	at org.h2.jdbc.JdbcStatement.executeInternal(JdbcStatement.java:245)
 	at org.h2.jdbc.JdbcStatement.execute(JdbcStatement.java:231)
-	at com.zaxxer.hikari.pool.ProxyStatement.execute(ProxyStatement.java:95)
-	at com.zaxxer.hikari.pool.HikariProxyStatement.execute(HikariProxyStatement.java)
-	at org.hibernate.tool.schema.internal.exec.GenerationTargetToDatabase.accept(GenerationTargetToDatabase.java:76)
-	at org.hibernate.tool.schema.internal.AbstractSchemaMigrator.applySqlString(AbstractSchemaMigrator.java:566)
-	at org.hibernate.tool.schema.internal.AbstractSchemaMigrator.applySqlStrings(AbstractSchemaMigrator.java:506)
-	at org.hibernate.tool.schema.internal.AbstractSchemaMigrator.applyUniqueKeys(AbstractSchemaMigrator.java:401)
-	at org.hibernate.tool.schema.internal.GroupedSchemaMigratorImpl.performTablesMigration(GroupedSchemaMigratorImpl.java:98)
-	at org.hibernate.tool.schema.internal.AbstractSchemaMigrator.performMigration(AbstractSchemaMigrator.java:220)
-	at org.hibernate.tool.schema.internal.AbstractSchemaMigrator.doMigration(AbstractSchemaMigrator.java:96)
-	at org.hibernate.tool.schema.spi.SchemaManagementToolCoordinator.performDatabaseAction(SchemaManagementToolCoordinator.java:269)
-	at org.hibernate.tool.schema.spi.SchemaManagementToolCoordinator.lambda$process$1(SchemaManagementToolCoordinator.java:101)
-	at java.base/java.util.HashMap.forEach(HashMap.java:1421)
-	at org.hibernate.tool.schema.spi.SchemaManagementToolCoordinator.process(SchemaManagementToolCoordinator.java:100)
-	at org.hibernate.boot.internal.SessionFactoryObserverForSchemaExport.sessionFactoryCreated(SessionFactoryObserverForSchemaExport.java:35)
-	at org.hibernate.internal.SessionFactoryObserverChain.sessionFactoryCreated(SessionFactoryObserverChain.java:33)
-	at org.hibernate.internal.SessionFactoryImpl.<init>(SessionFactoryImpl.java:323)
-	at org.hibernate.internal.SessionFactoryRegistry.instantiateSessionFactory(SessionFactoryRegistry.java:64)
-	at org.hibernate.boot.internal.SessionFactoryBuilderImpl.build(SessionFactoryBuilderImpl.java:437)
-	at org.hibernate.jpa.boot.internal.EntityManagerFactoryBuilderImpl.build(EntityManagerFactoryBuilderImpl.java:1456)
-	at org.springframework.orm.jpa.vendor.SpringHibernateJpaPersistenceProvider.createContainerEntityManagerFactory(SpringHibernateJpaPersistenceProvider.java:93)
-	at org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean.createNativeEntityManagerFactory(LocalContainerEntityManagerFactoryBean.java:443)
-	at org.springframework.orm.jpa.AbstractEntityManagerFactoryBean.buildNativeEntityManagerFactory(AbstractEntityManagerFactoryBean.java:436)
-	at org.springframework.orm.jpa.AbstractEntityManagerFactoryBean.afterPropertiesSet(AbstractEntityManagerFactoryBean.java:411)
-	at org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean.afterPropertiesSet(LocalContainerEntityManagerFactoryBean.java:419)
-	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.invokeInitMethods(AbstractAutowireCapableBeanFactory.java:1864)
-	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.initializeBean(AbstractAutowireCapableBeanFactory.java:1813)
-	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.doCreateBean(AbstractAutowireCapableBeanFactory.java:603)
-	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.createBean(AbstractAutowireCapableBeanFactory.java:525)
-	at org.springframework.beans.factory.support.AbstractBeanFactory.lambda$doGetBean$0(AbstractBeanFactory.java:333)
-	at org.springframework.beans.factory.support.DefaultSingletonBeanRegistry.getSingleton(DefaultSingletonBeanRegistry.java:371)
-	at org.springframework.beans.factory.support.AbstractBeanFactory.doGetBean(AbstractBeanFactory.java:331)
-	at org.springframework.beans.factory.support.AbstractBeanFactory.getBean(AbstractBeanFactory.java:201)
-	at org.springframework.context.support.AbstractApplicationContext.finishBeanFactoryInitialization(AbstractApplicationContext.java:977)
-	at org.springframework.context.support.AbstractApplicationContext.refresh(AbstractApplicationContext.java:621)
-	at org.springframework.boot.web.server.servlet.context.ServletWebServerApplicationContext.refresh(ServletWebServerApplicationContext.java:143)
-	at org.springframework.boot.SpringApplication.refresh(SpringApplication.java:756)
-	at org.springframework.boot.SpringApplication.refreshContext(SpringApplication.java:445)
-	at org.springframework.boot.SpringApplication.run(SpringApplication.java:321)
-	at org.springframework.boot.SpringApplication.run(SpringApplication.java:1365)
-	at org.springframework.boot.SpringApplication.run(SpringApplication.java:1354)
-	at com.akplaza.infra.InfraApplication.main(InfraApplication.java:12)
+	at org.h2.server.web.WebApp.getResult(WebApp.java:1344)
+	at org.h2.server.web.WebApp.query(WebApp.java:1142)
+	at org.h2.server.web.WebApp.query(WebApp.java:1118)
+	at org.h2.server.web.WebApp.process(WebApp.java:244)
+	at org.h2.server.web.WebApp.processRequest(WebApp.java:176)
+	at org.h2.server.web.JakartaWebServlet.doGet(JakartaWebServlet.java:129)
+	at org.h2.server.web.JakartaWebServlet.doPost(JakartaWebServlet.java:166)
+	at jakarta.servlet.http.HttpServlet.service(HttpServlet.java:653)
+	at jakarta.servlet.http.HttpServlet.service(HttpServlet.java:723)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:128)
+	at org.apache.tomcat.websocket.server.WsFilter.doFilter(WsFilter.java:53)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:107)
+	at org.springframework.web.servlet.resource.ResourceUrlEncodingFilter.doFilter(ResourceUrlEncodingFilter.java:66)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:107)
+	at org.springframework.web.filter.RequestContextFilter.doFilterInternal(RequestContextFilter.java:100)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:107)
+	at org.springframework.web.filter.FormContentFilter.doFilterInternal(FormContentFilter.java:93)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:107)
+	at org.springframework.web.filter.ServerHttpObservationFilter.doFilterInternal(ServerHttpObservationFilter.java:110)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:107)
+	at org.springframework.web.filter.CharacterEncodingFilter.doFilterInternal(CharacterEncodingFilter.java:199)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:107)
+	at org.apache.catalina.core.StandardWrapperValve.invoke(StandardWrapperValve.java:165)
+	at org.apache.catalina.core.StandardContextValve.invoke(StandardContextValve.java:77)
+	at org.apache.catalina.authenticator.AuthenticatorBase.invoke(AuthenticatorBase.java:492)
+	at org.apache.catalina.core.StandardHostValve.invoke(StandardHostValve.java:113)
+	at org.apache.catalina.valves.ErrorReportValve.invoke(ErrorReportValve.java:83)
+	at org.apache.catalina.core.StandardEngineValve.invoke(StandardEngineValve.java:72)
+	at org.apache.catalina.connector.CoyoteAdapter.service(CoyoteAdapter.java:341)
+	at org.apache.coyote.http11.Http11Processor.service(Http11Processor.java:397)
+	at org.apache.coyote.AbstractProcessorLight.process(AbstractProcessorLight.java:63)
+	at org.apache.coyote.AbstractProtocol$ConnectionHandler.process(AbstractProtocol.java:903)
+	at org.apache.tomcat.util.net.NioEndpoint$SocketProcessor.doRun(NioEndpoint.java:1779)
+	at org.apache.tomcat.util.net.SocketProcessorBase.run(SocketProcessorBase.java:52)
+	at org.apache.tomcat.util.threads.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:946)
+	at org.apache.tomcat.util.threads.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:480)
+	at org.apache.tomcat.util.threads.TaskThread$WrappingRunnable.run(TaskThread.java:57)
+	at java.base/java.lang.Thread.run(Thread.java:840)
+2026-04-08 16:13:31.099983+09:00 jdbc[13]: exception
+org.h2.jdbc.JdbcSQLSyntaxErrorException: Syntax error in SQL statement "SELECT * FROM HARDWARE \000d\000awhere model =[*]= ""shelf"""; expected "ALL (, ANY (, SOME ("; SQL statement:
+SELECT * FROM HARDWARE 
+where model == "shelf" [42001-240]
+2026-04-08 16:13:34.174853+09:00 jdbc[13]: exception
+org.h2.jdbc.JdbcSQLSyntaxErrorException: Syntax error in SQL statement "SELECT * FROM HARDWARE \000d\000awhere model =[*]= 'shelf'"; expected "ALL (, ANY (, SOME ("; SQL statement:
+SELECT * FROM HARDWARE 
+where model == 'shelf' [42001-240]
+2026-04-08 16:13:41.015020+09:00 jdbc[13]: exception
+org.h2.jdbc.JdbcSQLSyntaxErrorException: Syntax error in SQL statement "SELECT * FROM HARDWARE \000d\000a[*]10where model = 'shelf'"; SQL statement:
+SELECT * FROM HARDWARE 
+10where model = 'shelf' [42000-240]
+2026-04-08 16:13:48.217650+09:00 jdbc[13]: exception
+org.h2.jdbc.JdbcSQLSyntaxErrorException: Syntax error in SQL statement "SELECT * FROM HARDWARE \000d\000a[*]10where model = 'shelf'"; SQL statement:
+SELECT * FROM HARDWARE 
+10where model = 'shelf' [42000-240]
+2026-04-09 10:56:04.753282+09:00 jdbc[13]: exception
+org.h2.jdbc.JdbcSQLDataException: Data conversion error converting "'NETWORK' (RACK: ""RACK_TYPE"" TINYINT)"; SQL statement:
+UPDATE "PUBLIC"."RACK" SET "RACK_ID"=? ,"CREATED_AT"=? ,"UPDATED_AT"=? ,"NAME"=? ,"RACK_NO"=? ,"SIZE"=? ,"LOCATION_ID"=? ,"DESCRIPTION"=? ,"RACK_TYPE"=?  WHERE "RACK_ID"=? [22018-240]
+2026-04-09 10:56:04.757282+09:00 jdbc[13]: exception
+org.h2.jdbc.JdbcSQLDataException: Data conversion error converting "'NETWORK' (RACK: ""RACK_TYPE"" TINYINT)"; SQL statement:
+UPDATE "PUBLIC"."RACK" SET "RACK_ID"=? ,"CREATED_AT"=? ,"UPDATED_AT"=? ,"NAME"=? ,"RACK_NO"=? ,"SIZE"=? ,"LOCATION_ID"=? ,"DESCRIPTION"=? ,"RACK_TYPE"=?  WHERE "RACK_ID"=? [22018-240]
+2026-04-09 10:56:09.506098+09:00 jdbc[13]: exception
+org.h2.jdbc.JdbcSQLDataException: Data conversion error converting "'NETWORK' (RACK: ""RACK_TYPE"" TINYINT)"; SQL statement:
+UPDATE "PUBLIC"."RACK" SET "RACK_ID"=? ,"CREATED_AT"=? ,"UPDATED_AT"=? ,"NAME"=? ,"RACK_NO"=? ,"SIZE"=? ,"LOCATION_ID"=? ,"DESCRIPTION"=? ,"RACK_TYPE"=?  WHERE "RACK_ID"=? [22018-240]
+2026-04-09 10:56:09.506098+09:00 jdbc[13]: exception
+org.h2.jdbc.JdbcSQLDataException: Data conversion error converting "'NETWORK' (RACK: ""RACK_TYPE"" TINYINT)"; SQL statement:
+UPDATE "PUBLIC"."RACK" SET "RACK_ID"=? ,"CREATED_AT"=? ,"UPDATED_AT"=? ,"NAME"=? ,"RACK_NO"=? ,"SIZE"=? ,"LOCATION_ID"=? ,"DESCRIPTION"=? ,"RACK_TYPE"=?  WHERE "RACK_ID"=? [22018-240]
+2026-04-09 10:56:48.195345+09:00 jdbc[13]: exception
+org.h2.jdbc.JdbcSQLDataException: Data conversion error converting "'NETWORK' (RACK: ""RACK_TYPE"" TINYINT)"; SQL statement:
+UPDATE "PUBLIC"."RACK" SET "RACK_ID"=? ,"CREATED_AT"=? ,"UPDATED_AT"=? ,"NAME"=? ,"RACK_NO"=? ,"SIZE"=? ,"LOCATION_ID"=? ,"DESCRIPTION"=? ,"RACK_TYPE"=?  WHERE "RACK_ID"=? [22018-240]
+2026-04-09 10:56:48.195345+09:00 jdbc[13]: exception
+org.h2.jdbc.JdbcSQLDataException: Data conversion error converting "'NETWORK' (RACK: ""RACK_TYPE"" TINYINT)"; SQL statement:
+UPDATE "PUBLIC"."RACK" SET "RACK_ID"=? ,"CREATED_AT"=? ,"UPDATED_AT"=? ,"NAME"=? ,"RACK_NO"=? ,"SIZE"=? ,"LOCATION_ID"=? ,"DESCRIPTION"=? ,"RACK_TYPE"=?  WHERE "RACK_ID"=? [22018-240]
+2026-04-09 11:18:31.809821+09:00 jdbc[13]: exception
+org.h2.jdbc.JdbcSQLSyntaxErrorException: Syntax error in SQL statement "SELECT * FROM INFORMATION_SCHEMA.CHECK_CONSTRAINTS \000d\000a\000d\000aALTER [*]TABLE CHECK_CONSTRAINTS DROP CONSTRAINT CONSTRAINT_264"; SQL statement:
+SELECT * FROM INFORMATION_SCHEMA.CHECK_CONSTRAINTS 
+
+ALTER TABLE CHECK_CONSTRAINTS DROP CONSTRAINT CONSTRAINT_264 [42000-240]
+2026-04-09 11:18:51.799774+09:00 jdbc[13]: exception
+org.h2.jdbc.JdbcSQLSyntaxErrorException: Syntax error in SQL statement "SHOW [*]CONSTRAINTS"; SQL statement:
+SHOW CONSTRAINTS [42000-240]
